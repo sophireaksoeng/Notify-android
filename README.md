@@ -1,2 +1,3 @@
-# notion-lite-android
-Notion Lite — Android app (Kotlin, Compose, offline-first, Firebase).
+# Notify-android
+Notify — Android app (Kotlin, Compose, offline-first, Firebase).
+A small version app of notion 
