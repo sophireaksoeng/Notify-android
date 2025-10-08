@@ -36,9 +36,10 @@ Built for low-end phones and weak internet.
 ## 🛠 Requirements
 
 - **Android Studio** (Stable channel)
-- **Gradle JDK:** **21** (IDE can run on JBR 21; Gradle must use 21)
-    - Android Studio → *Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK = 21*
-- **Android SDK:** Platform **24**, Build-Tools **24.0.0**
+- **Gradle JDK:** **17** (IDE can run on JBR 21; Gradle must use 21)
+  - Android Studio → *Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK = 17*
+- **Android SDK:** Platform **34**, Build-Tools **34.0.0**
+
 
 ## 🚀 Quick Start
 ```bash
