@@ -41,5 +41,7 @@ Built for low-end phones and weak internet.
 - **Android SDK:** Platform **24**, Build-Tools **24.0.0**
 
 ## 🚀 Quick Start
+```bash
 git clone https://github.com/sophireaksoeng/Notify-android.git
 cd Notify-android
+git checkout 
