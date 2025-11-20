@@ -1,40 +1,18 @@
 package com.team.notify.taskflow.presentation.tasks
 
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
-import com.team.notify.taskflow.model.Task
-import com.team.notify.taskflow.model.TaskStatus
-import java.util.Date
-import java.util.Calendar
+import androidx.lifecycle.viewModelScope
+import com.team.notify.taskflow.mappers.toUiModel
+import com.team.notify.taskflow.repository.inmemory.DEFAULT_SPACE_ID
+import com.team.notify.taskflow.repository.inmemory.InMemoryTaskRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 class TaskViewModel : ViewModel() {
+    private val repo = InMemoryTaskRepository()
 
-    private val _tasks = mutableStateListOf<Task>()
-    val tasks: List<Task> get() = _tasks
-
-    init {
-        _tasks.addAll(
-            listOf(
-                Task(
-                    title = "Fix login bug",
-                    description = "Resolve crash on login",
-                    status = TaskStatus.TODO,
-                    dueDate = Calendar.getInstance().apply { add(Calendar.HOUR, 6) }.time
-                ),
-                Task(
-                    title = "UI polish",
-                    description = "Improve animations",
-                    status = TaskStatus.DOING,
-                    dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }.time
-                ),
-                Task(
-                    title = "Write ReminderWorker",
-                    description = "Set up WorkManager",
-                    status = TaskStatus.DONE,
-                    dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 2) }.time
-                )
-            )
-        )
-    }
+    val tasksFlow = repo.getTasksForSpace(DEFAULT_SPACE_ID)
+        .map { list -> list.map { it.toUiModel() } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }
-
