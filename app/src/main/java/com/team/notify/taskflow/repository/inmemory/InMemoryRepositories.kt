@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+
 const val DEFAULT_SPACE_ID = "DEFAULT_SPACE_ID"
 
 class InMemorySpaceRepository : SpaceRepository {
@@ -99,10 +100,25 @@ class InMemoryTaskRepository(
     }
 
     override fun getTasksForSpace(spaceId: String): Flow<List<TaskEntity>> =
-        flow.map { list -> list.filter { it.spaceId == spaceId }.sortedBy { it.dueAt ?: Long.MAX_VALUE } }
+        flow.map { list ->
+            list.filter { it.spaceId == spaceId }
+                .sortedBy { it.dueAt ?: Long.MAX_VALUE }
+        }
 
     override fun getTaskById(id: String): Flow<TaskEntity?> =
         flow.map { list -> list.firstOrNull { it.id == id } }
+
+    override fun searchTasks(query: String): Flow<List<TaskEntity>> =
+        flow.map { list ->
+            val trimmed = query.trim()
+            list.filter { it.spaceId == spaceId }
+                .filter {
+                    if (trimmed.isEmpty()) true
+                    else it.title.contains(trimmed, ignoreCase = true) ||
+                            (it.description?.contains(trimmed, ignoreCase = true) == true)
+                }
+                .sortedBy { it.dueAt ?: Long.MAX_VALUE }
+        }
 
     override suspend fun insert(task: TaskEntity) {
         store[task.id] = task

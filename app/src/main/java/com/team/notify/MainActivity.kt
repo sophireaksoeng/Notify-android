@@ -1,37 +1,47 @@
 package com.team.notify
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.*
+import dagger.hilt.android.AndroidEntryPoint
 import com.team.notify.taskflow.model.Task
 import com.team.notify.taskflow.ui.tasks.TaskDetailScreen
 import com.team.notify.taskflow.ui.tasks.TaskListScreen
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel(this)
+
         setContent {
             var selectedTask by remember { mutableStateOf<Task?>(null) }
 
             if (selectedTask == null) {
                 TaskListScreen(onTaskSelected = { selectedTask = it })
             } else {
-                TaskDetailScreen(task = selectedTask!!)
+                TaskDetailScreen(
+                    taskId = selectedTask!!.id,
+                    onSaved = { selectedTask = null }
+                )
             }
         }
+    }
+}
+
+fun createNotificationChannel(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            "reminders_channel",
+            "Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply { description = "Task reminders" }
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 }

@@ -9,11 +9,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks WHERE spaceId = :spaceId ORDER BY dueAt IS NULL, dueAt ASC")
+    @Query("SELECT * FROM tasks WHERE spaceId = :spaceId ORDER BY (dueAt IS NULL), dueAt ASC")
     fun getTasksForSpace(spaceId: String): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     fun getTaskById(id: String): Flow<TaskEntity?>
+
+    @Query("""
+        SELECT * FROM tasks
+        WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%'
+        ORDER BY (dueAt IS NULL), dueAt ASC
+    """)
+    fun searchTasks(query: String): Flow<List<TaskEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: TaskEntity)
