@@ -8,13 +8,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
-import dagger.hilt.android.AndroidEntryPoint
 import com.team.notify.taskflow.model.Task
 import com.team.notify.taskflow.ui.tasks.TaskDetailScreen
 import com.team.notify.taskflow.ui.tasks.TaskListScreen
+import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel(this)
@@ -41,6 +42,7 @@ fun createNotificationChannel(context: Context) {
             "Reminders",
             NotificationManager.IMPORTANCE_HIGH
         ).apply { description = "Task reminders" }
+
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }

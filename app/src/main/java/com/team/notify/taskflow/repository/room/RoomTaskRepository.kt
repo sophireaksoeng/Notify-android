@@ -29,8 +29,8 @@ class RoomTaskRepository @Inject constructor(
     override fun searchTasks(query: String): Flow<List<TaskEntity>> =
         taskDao.searchTasks(query)
 
-    override suspend fun insert(task: TaskEntity) = withContext(Dispatchers.IO) {
-        taskDao.insert(task)
+    override suspend fun insert(task: TaskEntity) {
+        taskDao.insert(task.copy(updatedAt = System.currentTimeMillis()))
 
         val op = OperationEntity(
             id = UUID.randomUUID().toString(),

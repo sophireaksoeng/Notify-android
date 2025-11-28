@@ -17,9 +17,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    @Provides
-    @Singleton
-    fun provideGson(): Gson = Gson()
+//    @Provides
+//    @Singleton
+//    fun provideGson(): Gson = Gson()
 
     @Provides
     @Singleton
@@ -32,8 +32,8 @@ object DatabaseModule {
     @Provides
     fun provideTaskDao(db: AppDatabase) = db.taskDao()
 
-    @Provides
-    fun provideOpQueueDao(db: AppDatabase) = db.opQueueDao()
+//    @Provides
+//    fun provideOpQueueDao(db: AppDatabase) = db.opQueueDao()
 
     @Provides
     @Singleton

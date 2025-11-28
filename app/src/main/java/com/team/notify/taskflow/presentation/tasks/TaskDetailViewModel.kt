@@ -11,8 +11,11 @@ import com.team.notify.taskflow.repository.interfaces.TaskRepository
 import com.team.notify.taskflow.data.entities.TaskEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -24,8 +27,13 @@ class TaskDetailViewModel @Inject constructor(
     private val appContext: Context
 ) : ViewModel() {
 
+    private val spaceId = ""
     private val _uiState = MutableStateFlow<Task?>(null)
     val uiState = _uiState.asStateFlow()
+
+    val tasks = repo.getTasksForSpace(spaceId)
+        .map { list -> list.map { it.toUiModel() } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun load(taskId: String) {
         viewModelScope.launch {
@@ -70,13 +78,11 @@ class TaskDetailViewModel @Inject constructor(
                 updatedAt = now
             )
             repo.insert(entity)
-            // schedule reminder
             scheduleReminder(entity.id, entity.dueAt ?: return@launch)
         }
     }
 
     private fun scheduleReminder(taskId: String, dueAtMillis: Long) {
-        // compute delay
         val now = System.currentTimeMillis()
         val delayMs = dueAtMillis - now
         if (delayMs <= 0) return
@@ -100,4 +106,19 @@ class TaskDetailViewModel @Inject constructor(
     fun cancelReminder(taskId: String) {
         WorkManager.getInstance(appContext).cancelUniqueWork("reminder_$taskId")
     }
+
+    fun updateStatus(taskId: String, newStatus: TaskStatus) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val old = repo.getTaskById(taskId).first() ?: return@launch
+
+            val entity = old.copy(
+                status = newStatus.name,
+                updatedAt = now
+            )
+
+            repo.insert(entity)
+        }
+    }
+
 }
