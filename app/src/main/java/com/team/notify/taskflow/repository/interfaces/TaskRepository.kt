@@ -9,4 +9,13 @@ interface TaskRepository {
     fun searchTasks(query: String): Flow<List<TaskEntity>>
     suspend fun insert(task: TaskEntity)
     suspend fun deleteById(id: String)
+    suspend fun updateStatus(taskId: String, status: String)
+    suspend fun pullRemoteChanges(spaceId: String)
+    suspend fun pushPendingOperations()
+    suspend fun initialSync(spaceId: String)
+    fun getTasks(spaceId: String): Flow<List<TaskEntity>>
+    fun listenToRemote(spaceId: String)
+    suspend fun upsert(task: TaskEntity)
+    fun startRealtimeListener(spaceId: String)
+    fun startRealtimeSync(spaceId: String)
 }

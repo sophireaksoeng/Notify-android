@@ -1,8 +1,11 @@
 package com.team.notify.taskflow.repository.inmemory
 
+import com.team.notify.taskflow.data.dao.OpQueueDao
+import com.team.notify.taskflow.data.entities.OperationEntity
 import com.team.notify.taskflow.data.entities.PageEntity
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
+import com.team.notify.taskflow.repository.interfaces.OpQueueRepository
 import com.team.notify.taskflow.repository.interfaces.PageRepository
 import com.team.notify.taskflow.repository.interfaces.SpaceRepository
 import com.team.notify.taskflow.repository.interfaces.TaskRepository
@@ -11,6 +14,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import kotlin.collections.remove
+import kotlin.text.get
+import kotlin.text.insert
+import kotlin.text.set
+import kotlin.toString
 
 const val DEFAULT_SPACE_ID = "DEFAULT_SPACE_ID"
 
@@ -77,24 +86,24 @@ class InMemoryTaskRepository(
 
     init {
         val now = System.currentTimeMillis()
-        fun seed(title: String, status: String, hoursAhead: Int): TaskEntity {
+
+        fun seed(title: String, status: String, hoursAhead: Int, isCompleted: Boolean): TaskEntity {
             return TaskEntity(
                 id = UUID.randomUUID().toString(),
                 spaceId = spaceId,
                 title = title,
                 description = "$title description",
+                deadline = now + hoursAhead * 60 * 60 * 1000L,
+                isCompleted = isCompleted,
                 status = status,
-                assigneeId = null,
-                labelsCsv = null,
-                dueAt = now + hoursAhead * 60 * 60 * 1000L,
-                createdAt = now,
                 updatedAt = now
             )
         }
+
         listOf(
-            seed("Fix login bug", "TODO", 6),
-            seed("UI polish", "DOING", 24),
-            seed("Write reminder worker", "DONE", 48)
+            seed("Fix login bug", "TODO", 6, isCompleted = false),
+            seed("UI polish", "DOING", 24, isCompleted = false),
+            seed("Write reminder worker", "DONE", 48, isCompleted = true)
         ).forEach { store[it.id] = it }
         flow.value = store.values.toList()
     }
@@ -102,8 +111,11 @@ class InMemoryTaskRepository(
     override fun getTasksForSpace(spaceId: String): Flow<List<TaskEntity>> =
         flow.map { list ->
             list.filter { it.spaceId == spaceId }
-                .sortedBy { it.dueAt ?: Long.MAX_VALUE }
+                .sortedBy { it.deadline ?: Long.MAX_VALUE }
         }
+
+    override fun getTasks(spaceId: String): Flow<List<TaskEntity>> =
+        getTasksForSpace(spaceId)
 
     override fun getTaskById(id: String): Flow<TaskEntity?> =
         flow.map { list -> list.firstOrNull { it.id == id } }
@@ -117,7 +129,7 @@ class InMemoryTaskRepository(
                     else it.title.contains(trimmed, ignoreCase = true) ||
                             (it.description?.contains(trimmed, ignoreCase = true) == true)
                 }
-                .sortedBy { it.dueAt ?: Long.MAX_VALUE }
+                .sortedBy { it.deadline ?: Long.MAX_VALUE }
         }
 
     override suspend fun insert(task: TaskEntity) {
@@ -125,8 +137,82 @@ class InMemoryTaskRepository(
         flow.value = store.values.toList()
     }
 
+    override suspend fun upsert(task: TaskEntity) {
+        insert(task)
+    }
+
     override suspend fun deleteById(id: String) {
         store.remove(id)
         flow.value = store.values.toList()
+    }
+
+    override suspend fun updateStatus(taskId: String, status: String) {
+        val existing = store[taskId] ?: return
+        val updated = existing.copy(
+            status = status,
+            isCompleted = status.equals("DONE", ignoreCase = true),
+            updatedAt = System.currentTimeMillis()
+        )
+        store[taskId] = updated
+        flow.value = store.values.toList()
+    }
+
+    override fun listenToRemote(spaceId: String) {
+    }
+
+    override fun startRealtimeListener(spaceId: String) {
+    }
+
+    override fun startRealtimeSync(spaceId: String) {
+    }
+
+    override suspend fun pullRemoteChanges(spaceId: String) {
+    }
+
+    override suspend fun pushPendingOperations() {
+    }
+
+    override suspend fun initialSync(spaceId: String) {
+    }
+}
+
+class OpQueueRepositoryImpl @Inject constructor(
+    private val dao: OpQueueDao
+) : OpQueueRepository {
+
+    override fun getPendingOperations(): Flow<List<OperationEntity>> {
+        return dao.getAllOperations()
+    }
+
+    override suspend fun addOperation(op: OperationEntity) {
+        dao.insert(op)
+    }
+
+    override suspend fun removeOperation(id: String) {
+        dao.deleteById(id)
+    }
+
+    override suspend fun clear() {
+        dao.clearAll()
+    }
+
+    override suspend fun enqueueUpsert(
+        type: String,
+        id: String,
+        payload: Map<String, Any?>
+    ) {
+        val op = OperationEntity(
+            id = UUID.randomUUID().toString(),
+            entityId = id,
+            entityType = type,
+            opType = "UPSERT",
+            payloadJson = payload.toString(),
+            timestamp = System.currentTimeMillis()
+        )
+        addOperation(op)
+    }
+
+    override suspend fun pushPendingOperations() {
+        dao.getAllOperations()
     }
 }

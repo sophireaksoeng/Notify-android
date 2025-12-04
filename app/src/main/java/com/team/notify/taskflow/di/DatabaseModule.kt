@@ -2,44 +2,45 @@ package com.team.notify.taskflow.di
 
 import android.content.Context
 import androidx.room.Room
-import com.google.gson.Gson
 import com.team.notify.taskflow.data.AppDatabase
-import com.team.notify.taskflow.repository.interfaces.TaskRepository
-import com.team.notify.taskflow.repository.room.RoomTaskRepository
+import com.team.notify.taskflow.data.AppDatabaseHolder
+import com.team.notify.taskflow.data.dao.OpQueueDao
+import com.team.notify.taskflow.data.dao.SpaceDao
+import com.team.notify.taskflow.data.dao.TaskDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-import dagger.hilt.android.qualifiers.ApplicationContext
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-//    @Provides
-//    @Singleton
-//    fun provideGson(): Gson = Gson()
-
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(context, AppDatabase::class.java, "notionlite.db")
-            .fallbackToDestructiveMigration()
+    fun provideAppDatabase(
+        @ApplicationContext context: Context
+    ): AppDatabase {
+        val db = Room.databaseBuilder(
+            context.applicationContext,
+            AppDatabase::class.java,
+            "notify-db"
+        )
+            .addCallback(AppDatabase.seedCallback())
             .build()
+
+        AppDatabaseHolder.database = db
+        return db
     }
 
     @Provides
-    fun provideTaskDao(db: AppDatabase) = db.taskDao()
-
-//    @Provides
-//    fun provideOpQueueDao(db: AppDatabase) = db.opQueueDao()
+    fun provideTaskDao(db: AppDatabase): TaskDao = db.taskDao()
 
     @Provides
-    @Singleton
-    fun provideTaskRepository(taskDao: com.team.notify.taskflow.data.dao.TaskDao,
-                              opQueueDao: com.team.notify.taskflow.data.dao.OpQueueDao,
-                              gson: Gson): TaskRepository {
-        return RoomTaskRepository(taskDao, opQueueDao, gson)
-    }
+    fun provideSpaceDao(db: AppDatabase): SpaceDao = db.spaceDao()
+
+    @Provides
+    fun provideOpQueueDao(db: AppDatabase): OpQueueDao = db.opQueueDao()
 }

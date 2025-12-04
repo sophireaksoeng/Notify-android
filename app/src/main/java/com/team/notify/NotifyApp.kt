@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.google.firebase.FirebaseApp
 import com.team.notify.taskflow.data.AppDatabase
+import com.team.notify.taskflow.data.AppDatabaseHolder
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.sync.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -20,19 +21,20 @@ class NotifyApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var appDatabase: AppDatabase
+
     override fun onCreate() {
         super.onCreate()
-
         FirebaseApp.initializeApp(this)
 
         WorkManager.initialize(
             this,
             workManagerConfiguration
         )
-        SyncScheduler.schedule(this)
+        SyncScheduler.schedule(this, "default-space")
 
         CoroutineScope(Dispatchers.IO).launch {
-            val db = AppDatabase.getInstance(this@NotifyApp)
             val now = System.currentTimeMillis()
             val defaultSpace = SpaceEntity(
                 id = "default-space",
@@ -41,7 +43,7 @@ class NotifyApp : Application(), Configuration.Provider {
                 createdAt = now,
                 updatedAt = now
             )
-            db.spaceDao().insert(defaultSpace)
+            appDatabase.spaceDao().insert(defaultSpace)
         }
     }
 

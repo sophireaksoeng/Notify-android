@@ -9,6 +9,8 @@ import com.team.notify.taskflow.model.Task
 import com.team.notify.taskflow.model.TaskStatus
 import com.team.notify.taskflow.repository.interfaces.TaskRepository
 import com.team.notify.taskflow.data.entities.TaskEntity
+import com.team.notify.taskflow.reminders.ReminderScheduler
+import com.team.notify.taskflow.reminders.ReminderWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -62,23 +64,24 @@ class TaskDetailViewModel @Inject constructor(
     }
 
     fun save(taskId: String) {
-        val t = _uiState.value ?: return
+        val current = _uiState.value ?: return
         viewModelScope.launch {
             val now = System.currentTimeMillis()
+            val id = taskId.ifEmpty { UUID.randomUUID().toString() }
+            val deadlineMillis = current.dueDate.time
             val entity = TaskEntity(
-                id = taskId.ifEmpty { UUID.randomUUID().toString() },
-                spaceId = "",
-                title = t.title,
-                description = t.description,
-                status = t.status.name,
-                assigneeId = null,
-                labelsCsv = null,
-                dueAt = t.dueDate.time,
-                createdAt = now,
+                id = id,
+                spaceId = spaceId,
+                title = current.title,
+                description = current.description,
+                status = current.status.name,
+                deadline = deadlineMillis,
+                isCompleted = current.status == TaskStatus.DONE,
                 updatedAt = now
             )
             repo.insert(entity)
-            scheduleReminder(entity.id, entity.dueAt ?: return@launch)
+            scheduleReminder(entity.id, deadlineMillis)
+            ReminderScheduler.scheduleReminder(appContext, entity.id, deadlineMillis)
         }
     }
 
@@ -91,7 +94,7 @@ class TaskDetailViewModel @Inject constructor(
             .putString("taskId", taskId)
             .build()
 
-        val request = OneTimeWorkRequestBuilder<com.team.notify.taskflow.presentation.tasks.ReminderWorker>()
+        val request = OneTimeWorkRequestBuilder<ReminderWorker>()
             .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
             .setInputData(data)
             .build()
@@ -120,5 +123,4 @@ class TaskDetailViewModel @Inject constructor(
             repo.insert(entity)
         }
     }
-
 }

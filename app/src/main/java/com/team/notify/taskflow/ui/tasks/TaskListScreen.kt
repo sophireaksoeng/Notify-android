@@ -3,12 +3,15 @@ package com.team.notify.taskflow.ui.tasks
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.team.notify.taskflow.model.Task
@@ -23,9 +26,19 @@ fun TaskListScreen(
     onTaskSelected: (Task) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Task List") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Task List") },
+                actions = {
+                    IconButton(onClick = { viewModel.refresh(context) }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                }
+            )
+        }
     ) { padding ->
         when (val state = uiState) {
             TaskListUiState.Loading -> {
@@ -38,6 +51,7 @@ fun TaskListScreen(
                     CircularProgressIndicator()
                 }
             }
+
             TaskListUiState.Empty -> {
                 Box(
                     modifier = Modifier
@@ -48,6 +62,7 @@ fun TaskListScreen(
                     Text("No tasks found.")
                 }
             }
+
             is TaskListUiState.Error -> {
                 Box(
                     modifier = Modifier
@@ -58,12 +73,13 @@ fun TaskListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Error: ${state.message}")
                         Spacer(Modifier.height(12.dp))
-                        Button(onClick = { viewModel.refresh() }) {
+                        Button(onClick = { viewModel.refresh(context) }) {
                             Text("Retry")
                         }
                     }
                 }
             }
+
             is TaskListUiState.Data -> {
                 LazyColumn(
                     modifier = Modifier

@@ -1,12 +1,11 @@
 package com.team.notify.taskflow.di
 
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.gson.Gson
-import com.team.notify.taskflow.data.AppDatabase
-import com.team.notify.taskflow.data.dao.OpQueueDao
+import android.content.Context
+import androidx.work.WorkManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -15,8 +14,8 @@ import javax.inject.Singleton
 object WorkerModule {
 
     @Provides
-    fun provideOpQueueDao(db: AppDatabase): OpQueueDao = db.opQueueDao()
-
-    @Provides
-    fun provideGson(): Gson = Gson()
+    @Singleton
+    fun provideWorkManager(
+        @ApplicationContext context: Context
+    ): WorkManager = WorkManager.getInstance(context)
 }

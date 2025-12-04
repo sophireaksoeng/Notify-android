@@ -12,6 +12,7 @@ import com.team.notify.taskflow.model.TaskStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +31,7 @@ fun TaskDetailScreen(
                 .padding(16.dp)
         ) {
             val task = uiState ?: Task(
-                id = "",
+                id = UUID.randomUUID().toString(),
                 title = "",
                 description = "",
                 status = TaskStatus.TODO,
@@ -51,13 +52,21 @@ fun TaskDetailScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
+
             val formatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-            Text("Due: ${formatter.format(task.dueDate)}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Due: ${formatter.format(task.dueDate)}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
             Spacer(Modifier.height(16.dp))
             Button(onClick = {
                 val newMillis = System.currentTimeMillis() + 60 * 60 * 1000
                 viewModel.updateDueDate(newMillis)
-            }) { Text("Set due +1h (test)") }
+            }) {
+                Text("Set due +1h (test)")
+            }
+
             Spacer(Modifier.height(24.dp))
             Row {
                 Button(onClick = {
@@ -65,7 +74,9 @@ fun TaskDetailScreen(
                     onSaved()
                 }) { Text("Save") }
                 Spacer(Modifier.width(12.dp))
-                Button(onClick = { viewModel.cancelReminder(taskId) }) { Text("Cancel reminder") }
+                Button(onClick = { viewModel.cancelReminder(taskId) }) {
+                    Text("Cancel reminder")
+                }
             }
         }
     }
