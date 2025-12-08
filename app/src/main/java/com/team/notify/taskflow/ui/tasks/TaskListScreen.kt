@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.team.notify.taskflow.model.Task
-import com.team.notify.taskflow.presentation.tasks.TaskListUiState
+import com.team.notify.taskflow.presentation.pages.TaskListUiState
 import com.team.notify.taskflow.presentation.tasks.TaskListViewModel
 import com.team.notify.taskflow.ui.tasks.components.TaskItem
 

@@ -67,6 +67,19 @@ class InMemoryPageRepository : PageRepository {
     override fun getPageById(id: String): Flow<PageEntity?> =
         flow.map { list -> list.firstOrNull { it.id == id } }
 
+    override fun searchPages(query: String): Flow<List<PageEntity>> =
+        flow.map { list ->
+            val trimmed = query.trim()
+            if (trimmed.isEmpty()) {
+                list.sortedBy { it.title }
+            } else {
+                list.filter {
+                    it.title.contains(trimmed, ignoreCase = true) ||
+                            (it.content?.contains(trimmed, ignoreCase = true) == true)
+                }.sortedBy { it.title }
+            }
+        }
+
     override suspend fun insert(page: PageEntity) {
         store[page.id] = page
         flow.value = store.values.sortedBy { it.title }
@@ -75,6 +88,15 @@ class InMemoryPageRepository : PageRepository {
     override suspend fun deleteById(id: String) {
         store.remove(id)
         flow.value = store.values.sortedBy { it.title }
+    }
+
+    override suspend fun pullRemoteChanges(spaceId: String) {
+    }
+
+    override suspend fun pushPendingOperations() {
+    }
+
+    override suspend fun initialSync(spaceId: String) {
     }
 }
 

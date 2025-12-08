@@ -5,11 +5,13 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.team.notify.taskflow.data.dao.OpQueueDao
+import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.SpaceDao
 import com.team.notify.taskflow.data.dao.TaskDao
 import com.team.notify.taskflow.data.entities.OperationEntity
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
+import com.team.notify.taskflow.data.entities.PageEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,16 +20,18 @@ import kotlinx.coroutines.launch
     entities = [
         TaskEntity::class,
         SpaceEntity::class,
-        OperationEntity::class
+        OperationEntity::class,
+        PageEntity::class
     ],
-    version = 1,
-    exportSchema = false
+    version = 2,
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun taskDao(): TaskDao
     abstract fun spaceDao(): SpaceDao
     abstract fun opQueueDao(): OpQueueDao
+    abstract fun pageDao(): PageDao
 
     companion object {
 

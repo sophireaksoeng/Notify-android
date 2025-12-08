@@ -1,4 +1,4 @@
-package com.team.notify.taskflow.presentation.tasks
+package com.team.notify.taskflow.presentation.pages
 
 import com.team.notify.taskflow.model.Task
 
