@@ -5,6 +5,7 @@ import com.team.notify.taskflow.data.entities.OperationEntity
 import com.team.notify.taskflow.data.entities.PageEntity
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
+import com.team.notify.taskflow.data.entities.PageHistoryEntity
 import com.team.notify.taskflow.repository.interfaces.OpQueueRepository
 import com.team.notify.taskflow.repository.interfaces.PageRepository
 import com.team.notify.taskflow.repository.interfaces.SpaceRepository
@@ -60,6 +61,8 @@ class InMemorySpaceRepository : SpaceRepository {
 class InMemoryPageRepository : PageRepository {
     private val store = ConcurrentHashMap<String, PageEntity>()
     private val flow = MutableStateFlow<List<PageEntity>>(emptyList())
+    private val historyStore = ConcurrentHashMap<String, MutableList<PageHistoryEntity>>()
+    private val historyFlow = MutableStateFlow<List<PageHistoryEntity>>(emptyList())
 
     override fun getPagesForSpace(spaceId: String): Flow<List<PageEntity>> =
         flow.map { list -> list.filter { it.spaceId == spaceId } }
@@ -80,6 +83,16 @@ class InMemoryPageRepository : PageRepository {
             }
         }
 
+    override suspend fun insertHistory(history: PageHistoryEntity) {
+        val listForPage = historyStore.getOrPut(history.pageId) { mutableListOf() }
+        listForPage.add(history)
+
+        historyFlow.value = historyStore.values.flatten()
+    }
+
+    override fun getHistoryForPage(pageId: String): Flow<List<PageHistoryEntity>> =
+        historyFlow.map { all -> all.filter { it.pageId == pageId } }
+
     override suspend fun insert(page: PageEntity) {
         store[page.id] = page
         flow.value = store.values.sortedBy { it.title }
@@ -90,14 +103,16 @@ class InMemoryPageRepository : PageRepository {
         flow.value = store.values.sortedBy { it.title }
     }
 
-    override suspend fun pullRemoteChanges(spaceId: String) {
+    override suspend fun deleteHistoryForPage(pageId: String) {
+        historyStore.remove(pageId)
+        historyFlow.value = historyStore.values.flatten()
     }
 
-    override suspend fun pushPendingOperations() {
-    }
+    override suspend fun pullRemoteChanges(spaceId: String) { }
 
-    override suspend fun initialSync(spaceId: String) {
-    }
+    override suspend fun pushPendingOperations() { }
+
+    override suspend fun initialSync(spaceId: String) { }
 }
 
 class InMemoryTaskRepository(

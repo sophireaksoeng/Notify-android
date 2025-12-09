@@ -43,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.foundation)
     val roomVersion = "2.6.1"
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -79,4 +80,5 @@ dependencies {
     implementation("com.google.firebase:firebase-bom:33.6.0")
     // Coroutines Play Services (await)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.26.0")
 }

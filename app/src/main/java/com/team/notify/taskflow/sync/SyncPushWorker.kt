@@ -41,22 +41,27 @@ class SyncPushWorker @AssistedInject constructor(
 
     private suspend fun pushOperation(op: OperationEntity) {
         when (op.entityType) {
-            "TASK" -> {
-                val task = taskDao.getTaskByIdOnce(op.entityId) ?: return
-                firestore.collection("tasks")
-                    .document(task.id)
-                    .set(task)
-                    .await()
-            }
-            "PAGE" -> {
-                val page = pageDao.getPageById(op.entityId).firstOrNull() ?: return
-                firestore.collection("pages")
-                    .document(page.id)
-                    .set(page)
-                    .await()
-            }
-            else -> {
-            }
+            "TASK" -> pushTask(op)
+            "PAGE" -> pushPage(op)
+            else -> {}
         }
+    }
+
+    private suspend fun pushTask(op: OperationEntity) {
+        val task = taskDao.getTaskByIdOnce(op.entityId) ?: return
+        firestore
+            .collection("tasks")
+            .document(task.id)
+            .set(task)
+            .await()
+    }
+
+    private suspend fun pushPage(op: OperationEntity) {
+        val page = pageDao.getPageByIdOnce(op.entityId) ?: return
+        firestore
+            .collection("pages")
+            .document(page.id)
+            .set(page)
+            .await()
     }
 }

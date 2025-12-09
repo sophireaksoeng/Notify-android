@@ -9,6 +9,7 @@ data class PageEntity(
     val spaceId: String,
     val title: String,
     val content: String?,
+    val version: Int,
     val createdAt: Long,
     val updatedAt: Long
 )

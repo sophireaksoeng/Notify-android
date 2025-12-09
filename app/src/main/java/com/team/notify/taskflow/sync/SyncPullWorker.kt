@@ -54,11 +54,13 @@ class SyncPullWorker @AssistedInject constructor(
         val remotePages = snapshot.toObjects(PageEntity::class.java)
 
         for (remote in remotePages) {
-            val local = pageDao.getPageById(remote.id).firstOrNull()
+            val local = pageDao.getPageByIdOnce(remote.id)
 
             val chosen = if (local == null) {
                 remote
-            } else if (remote.updatedAt > local.updatedAt) {
+            } else if (remote.version > local.version) {
+                remote
+            } else if (remote.version == local.version && remote.updatedAt > local.updatedAt) {
                 remote
             } else {
                 local

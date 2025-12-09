@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PageDao {
+    @Query("SELECT * FROM pages WHERE id = :id LIMIT 1")
+    suspend fun getPageByIdOnce(id: String): PageEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(page: PageEntity)

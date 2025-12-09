@@ -37,10 +37,9 @@ fun PageDetailScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = state.description ?: "",
-            onValueChange = { viewModel.updateDescription(it) },
-            label = { Text("Description") }
+        PageContentEditor(
+            content = state.content,
+            onContentChange = { viewModel.updateContent(it) }
         )
 
         Spacer(Modifier.height(20.dp))

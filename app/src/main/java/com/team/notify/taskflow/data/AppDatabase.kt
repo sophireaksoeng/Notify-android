@@ -3,27 +3,52 @@ package com.team.notify.taskflow.data
 import android.content.Context
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
+import com.team.notify.taskflow.data.dao.PageHistoryDao
 import com.team.notify.taskflow.data.dao.SpaceDao
 import com.team.notify.taskflow.data.dao.TaskDao
 import com.team.notify.taskflow.data.entities.OperationEntity
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
 import com.team.notify.taskflow.data.entities.PageEntity
+import com.team.notify.taskflow.data.entities.PageHistoryEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+
+        database.execSQL(
+            "ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1"
+        )
+
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS page_history (
+                id TEXT PRIMARY KEY NOT NULL,
+                pageId TEXT NOT NULL,
+                version INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                timestamp INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+    }
+}
 
 @Database(
     entities = [
         TaskEntity::class,
         SpaceEntity::class,
         OperationEntity::class,
-        PageEntity::class
+        PageEntity::class,
+        PageHistoryEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun spaceDao(): SpaceDao
     abstract fun opQueueDao(): OpQueueDao
     abstract fun pageDao(): PageDao
+    abstract fun pageHistoryDao(): PageHistoryDao
 
     companion object {
 
