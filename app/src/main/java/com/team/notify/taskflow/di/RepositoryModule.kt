@@ -1,9 +1,9 @@
 package com.team.notify.taskflow.di
 
-import com.team.notify.taskflow.repository.TaskRepositoryImpl
-import com.team.notify.taskflow.repository.interfaces.TaskRepository
-import com.team.notify.taskflow.repository.OpQueueRepositoryImpl
-import com.team.notify.taskflow.repository.interfaces.OpQueueRepository
+import com.team.notify.taskflow.data.repository.TaskRepositoryImpl
+import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
+import com.team.notify.taskflow.data.repository.OpQueueRepositoryImpl
+import com.team.notify.taskflow.data.repository.interfaces.OpQueueRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

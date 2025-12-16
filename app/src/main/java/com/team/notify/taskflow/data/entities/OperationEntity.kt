@@ -8,7 +8,8 @@ data class OperationEntity(
     @PrimaryKey val id: String,
     val entityId: String,
     val entityType: String,
-    val opType: String,
+    val operation: String,
     val payloadJson: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val retryCount: Int = 0
 )

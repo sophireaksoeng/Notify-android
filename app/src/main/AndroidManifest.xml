@@ -26,7 +26,7 @@
                 tools:node="remove" />
         </provider>
         <receiver
-            android:name=".taskflow.reminders.BootReceiver"
+            android:name=".taskflow.data.reminders.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

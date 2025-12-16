@@ -7,10 +7,10 @@ import androidx.work.*
 import com.team.notify.taskflow.mappers.toUiModel
 import com.team.notify.taskflow.model.Task
 import com.team.notify.taskflow.model.TaskStatus
-import com.team.notify.taskflow.repository.interfaces.TaskRepository
+import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
 import com.team.notify.taskflow.data.entities.TaskEntity
-import com.team.notify.taskflow.reminders.ReminderScheduler
-import com.team.notify.taskflow.reminders.ReminderWorker
+import com.team.notify.taskflow.data.reminders.ReminderScheduler
+import com.team.notify.taskflow.data.reminders.TaskReminderWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -94,7 +94,7 @@ class TaskDetailViewModel @Inject constructor(
             .putString("taskId", taskId)
             .build()
 
-        val request = OneTimeWorkRequestBuilder<ReminderWorker>()
+        val request = OneTimeWorkRequestBuilder<TaskReminderWorker>()
             .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
             .setInputData(data)
             .build()

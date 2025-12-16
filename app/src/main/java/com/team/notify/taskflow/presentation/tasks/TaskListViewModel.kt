@@ -7,9 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.team.notify.taskflow.data.dao.TaskDao
 import com.team.notify.taskflow.model.TaskStatus
 import com.team.notify.taskflow.mappers.toUiModel
-import com.team.notify.taskflow.presentation.pages.TaskListUiState
-import com.team.notify.taskflow.repository.interfaces.TaskRepository
-import com.team.notify.taskflow.sync.SyncScheduler
+import com.team.notify.taskflow.presentation.tasks.TaskListUiState
+import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
+import com.team.notify.taskflow.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,7 +27,8 @@ import javax.inject.Inject
 class TaskListViewModel @Inject constructor(
     private val repo: TaskRepository,
     savedStateHandle: SavedStateHandle,
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    private val syncScheduler: SyncScheduler
 ) : ViewModel() {
 
     init {
@@ -73,7 +74,7 @@ class TaskListViewModel @Inject constructor(
     }
 
     fun refresh(context: android.content.Context) {
-        SyncScheduler.schedule(context, currentSpaceId)
+        syncScheduler.schedule(context, currentSpaceId)
         observeTasks()
     }
 

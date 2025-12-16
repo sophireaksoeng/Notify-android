@@ -19,7 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-val MIGRATION_2_3 = object : Migration(2, 3) {
+val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(database: SupportSQLiteDatabase) {
 
         database.execSQL(
@@ -48,7 +48,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         PageEntity::class,
         PageHistoryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -139,7 +139,7 @@ abstract class AppDatabase : RoomDatabase() {
                     id = "op-${task.id}",
                     entityId = task.id,
                     entityType = "TASK",
-                    opType = "UPSERT",
+                    operation = "UPSERT",
                     payloadJson = "{}",
                     timestamp = now
                 )

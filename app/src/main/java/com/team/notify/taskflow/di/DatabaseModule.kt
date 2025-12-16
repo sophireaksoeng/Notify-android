@@ -4,14 +4,14 @@ import android.content.Context
 import androidx.room.Room
 import com.team.notify.taskflow.data.AppDatabase
 import com.team.notify.taskflow.data.AppDatabaseHolder
-import com.team.notify.taskflow.data.MIGRATION_2_3
+import com.team.notify.taskflow.data.MIGRATION_3_4
 import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.PageHistoryDao
 import com.team.notify.taskflow.data.dao.SpaceDao
 import com.team.notify.taskflow.data.dao.TaskDao
-import com.team.notify.taskflow.repository.RoomPageRepository
-import com.team.notify.taskflow.repository.interfaces.PageRepository
+import com.team.notify.taskflow.data.repository.RoomPageRepository
+import com.team.notify.taskflow.data.repository.interfaces.PageRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,7 +33,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "notify-db"
         )
-            .addMigrations(MIGRATION_2_3)
+            .addMigrations(MIGRATION_3_4)
             .addCallback(AppDatabase.seedCallback())
             .build()
 
