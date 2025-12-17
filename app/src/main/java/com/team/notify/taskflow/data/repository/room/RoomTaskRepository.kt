@@ -39,6 +39,8 @@ class RoomTaskRepository @Inject constructor(
             entityType = "TASK",
             operation = "UPSERT",
             payloadJson = gson.toJson(toSave),
+            spaceId = "",
+            userId = "",
             timestamp = System.currentTimeMillis()
         )
         opQueueDao.insert(op)
@@ -52,6 +54,8 @@ class RoomTaskRepository @Inject constructor(
             entityType = "TASK",
             operation = "DELETE",
             payloadJson = "{}",
+            spaceId = "",
+            userId = "",
             timestamp = System.currentTimeMillis()
         )
         opQueueDao.insert(op)
@@ -73,6 +77,8 @@ class RoomTaskRepository @Inject constructor(
                 entityType = "TASK",
                 operation = "UPSERT",
                 payloadJson = gson.toJson(updated),
+                spaceId = "",
+                userId = "",
                 timestamp = System.currentTimeMillis()
             )
             opQueueDao.insert(op)

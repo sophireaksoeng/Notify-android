@@ -22,6 +22,7 @@ class SyncPushWorker @AssistedInject constructor(
     private val opDao: OpQueueDao,
     private val taskDao: TaskDao,
     private val pageDao: PageDao,
+    private val permissionChecker: PermissionChecker
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -30,6 +31,11 @@ class SyncPushWorker @AssistedInject constructor(
 
         for (op in operations) {
             try {
+                if (!permissionChecker.canEdit(op.spaceId, op.userId)) {
+                    opDao.deleteById(op.id)
+                    continue
+                }
+
                 pushOperation(op)
                 opDao.deleteById(op.id)
             } catch (e: Exception) {

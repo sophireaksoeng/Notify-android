@@ -7,8 +7,10 @@ import androidx.work.WorkerParameters
 import com.google.firebase.firestore.FirebaseFirestore
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.TaskDao
+import com.team.notify.taskflow.data.dao.SpaceMemberDao
 import com.team.notify.taskflow.data.entities.PageEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
+import com.team.notify.taskflow.data.entities.SpaceMemberEntity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.tasks.await
@@ -20,10 +22,13 @@ class SyncPullWorker @AssistedInject constructor(
     private val firestore: FirebaseFirestore,
     private val taskDao: TaskDao,
     private val pageDao: PageDao,
+    private val spaceMemberDao: SpaceMemberDao
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
         return try {
+            pullAllMembers()
+
             pullPages()
             val snapshot = firestore.collection("tasks").get().await()
             val remoteTasks: List<TaskEntity> = snapshot.toObjects(TaskEntity::class.java)
@@ -42,6 +47,33 @@ class SyncPullWorker @AssistedInject constructor(
             Result.success()
         } catch (e: Exception) {
             Result.retry()
+        }
+    }
+
+    private suspend fun pullAllMembers() {
+        val spacesSnapshot = firestore.collection("spaces").get().await()
+        for (spaceDoc in spacesSnapshot.documents) {
+            val spaceId = spaceDoc.id
+            pullMembers(spaceId)
+        }
+    }
+
+    private suspend fun pullMembers(spaceId: String) {
+        val snapshot = firestore
+            .collection("spaces")
+            .document(spaceId)
+            .collection("members")
+            .get()
+            .await()
+
+        for (doc in snapshot.documents) {
+            spaceMemberDao.upsert(
+                SpaceMemberEntity(
+                    spaceId = spaceId,
+                    userId = doc.id,
+                    role = doc.getString("role") ?: "VIEWER"
+                )
+            )
         }
     }
 

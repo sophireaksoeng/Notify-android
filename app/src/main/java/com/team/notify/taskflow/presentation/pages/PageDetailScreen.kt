@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -20,6 +21,7 @@ fun PageDetailScreen(
     spaceId: String,
     viewModel: PageDetailViewModel,
     onSaved: () -> Unit,
+    canEdit: Boolean
 ) {
     LaunchedEffect(pageId) {
         viewModel.load(pageId)
@@ -28,17 +30,24 @@ fun PageDetailScreen(
     val state by viewModel.uiState.collectAsState()
 
     Column(Modifier.padding(16.dp)) {
+        if (!canEdit) {
+            Text("Read-only mode", color = Color.Red)
+            Spacer(Modifier.height(8.dp))
+        }
+
         OutlinedTextField(
             value = state.title,
             onValueChange = { viewModel.updateTitle(it) },
-            label = { Text("Page Title") }
+            label = { Text("Page Title") },
+            enabled = canEdit
         )
 
         Spacer(Modifier.height(12.dp))
 
         PageContentEditor(
             content = state.content,
-            onContentChange = { viewModel.updateContent(it) }
+            onContentChange = { viewModel.updateContent(it) },
+            enabled = canEdit
         )
 
         Spacer(Modifier.height(20.dp))
@@ -47,7 +56,8 @@ fun PageDetailScreen(
             onClick = {
                 viewModel.save(spaceId)
                 onSaved()
-            }
+            },
+            enabled = canEdit
         ) {
             Text("Save")
         }

@@ -24,7 +24,8 @@ import com.mikepenz.markdown.m3.Markdown
 @Composable
 fun PageContentEditor(
     content: String,
-    onContentChange: (String) -> Unit
+    onContentChange: (String) -> Unit,
+    enabled: Boolean = true
 ) {
     var tab by remember { mutableStateOf(0) }
 
@@ -42,7 +43,9 @@ fun PageContentEditor(
                     .fillMaxSize()
                     .padding(12.dp),
                 label = { Text("Markdown Content") },
-                maxLines = Int.MAX_VALUE
+                maxLines = Int.MAX_VALUE,
+                enabled = enabled,
+                singleLine = false,
             )
         } else {
             Box(

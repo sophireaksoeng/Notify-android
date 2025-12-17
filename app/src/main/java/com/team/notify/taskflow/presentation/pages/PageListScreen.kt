@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -74,9 +75,15 @@ fun PageListScreen(
                     items(pages) { page ->
                         ListItem(
                             headlineContent = { Text(page.title) },
-                            modifier = Modifier.clickable {
-                                onPageClick(page.id)
-                            }
+                            trailingContent = {
+                                if (page.isShared) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Shared"
+                                    )
+                                }
+                            },
+                            modifier = Modifier.clickable { onPageClick(page.id) }
                         )
                     }
                 }

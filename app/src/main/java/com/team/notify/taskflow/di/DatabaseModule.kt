@@ -4,14 +4,16 @@ import android.content.Context
 import androidx.room.Room
 import com.team.notify.taskflow.data.AppDatabase
 import com.team.notify.taskflow.data.AppDatabaseHolder
-import com.team.notify.taskflow.data.MIGRATION_3_4
+import com.team.notify.taskflow.data.MIGRATION_4_5
 import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.PageHistoryDao
 import com.team.notify.taskflow.data.dao.SpaceDao
+import com.team.notify.taskflow.data.dao.SpaceMemberDao
 import com.team.notify.taskflow.data.dao.TaskDao
 import com.team.notify.taskflow.data.repository.RoomPageRepository
 import com.team.notify.taskflow.data.repository.interfaces.PageRepository
+import com.team.notify.taskflow.auth.CurrentUserProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,7 +35,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "notify-db"
         )
-            .addMigrations(MIGRATION_3_4)
+            .addMigrations(MIGRATION_4_5)
             .addCallback(AppDatabase.seedCallback())
             .build()
 
@@ -46,6 +48,9 @@ object DatabaseModule {
 
     @Provides
     fun provideSpaceDao(db: AppDatabase): SpaceDao = db.spaceDao()
+
+    @Provides
+    fun provideSpaceMemberDao(db: AppDatabase): SpaceMemberDao = db.spaceMemberDao()
 
     @Provides
     fun provideOpQueueDao(db: AppDatabase): OpQueueDao = db.opQueueDao()
@@ -61,8 +66,9 @@ object DatabaseModule {
     fun providePageRepository(
         pageDao: PageDao,
         pageHistoryDao: PageHistoryDao,
-        opQueueDao: OpQueueDao
+        opQueueDao: OpQueueDao,
+        currentUserProvider: CurrentUserProvider
     ): PageRepository {
-        return RoomPageRepository(pageDao, pageHistoryDao, opQueueDao)
+        return RoomPageRepository(pageDao, pageHistoryDao, opQueueDao, currentUserProvider)
     }
 }

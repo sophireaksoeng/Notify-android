@@ -1,5 +1,6 @@
 package com.team.notify.taskflow.data.repository
 
+import com.team.notify.taskflow.auth.CurrentUserProvider
 import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.PageHistoryDao
@@ -14,7 +15,8 @@ import javax.inject.Inject
 class RoomPageRepository @Inject constructor(
     private val pageDao: PageDao,
     private val pageHistoryDao: PageHistoryDao,
-    private val opDao: OpQueueDao
+    private val opDao: OpQueueDao,
+    private val currentUserProvider: CurrentUserProvider
 ) : PageRepository {
 
     override fun getPagesForSpace(id: String): Flow<List<PageEntity>> =
@@ -32,14 +34,18 @@ class RoomPageRepository @Inject constructor(
     override suspend fun insert(page: PageEntity) {
         pageDao.upsert(page)
 
+        val currentUserId = currentUserProvider.getCurrentUserId() ?: ""
+
         opDao.insert(
             OperationEntity(
                 id = UUID.randomUUID().toString(),
-                entityType = "PAGE",
                 entityId = page.id,
+                entityType = "PAGE",
+                spaceId = page.spaceId,
+                userId = currentUserId,
                 operation = "UPSERT",
-                timestamp = System.currentTimeMillis(),
-                payloadJson = ""
+                payloadJson = "",
+                timestamp = System.currentTimeMillis()
             )
         )
     }
@@ -58,11 +64,13 @@ class RoomPageRepository @Inject constructor(
         opDao.insert(
             OperationEntity(
                 id = UUID.randomUUID().toString(),
-                entityType = "PAGE",
                 entityId = id,
+                entityType = "PAGE",
+                spaceId = "",
+                userId = currentUserProvider.getCurrentUserId() ?: "",
                 operation = "DELETE",
-                timestamp = System.currentTimeMillis(),
-                payloadJson = ""
+                payloadJson = "",
+                timestamp = System.currentTimeMillis()
             )
         )
     }

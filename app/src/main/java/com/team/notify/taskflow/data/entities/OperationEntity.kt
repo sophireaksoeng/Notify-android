@@ -8,6 +8,8 @@ data class OperationEntity(
     @PrimaryKey val id: String,
     val entityId: String,
     val entityType: String,
+    val spaceId: String,
+    val userId: String,
     val operation: String,
     val payloadJson: String,
     val timestamp: Long,

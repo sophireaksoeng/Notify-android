@@ -9,31 +9,58 @@ import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.PageHistoryDao
 import com.team.notify.taskflow.data.dao.SpaceDao
+import com.team.notify.taskflow.data.dao.SpaceMemberDao
 import com.team.notify.taskflow.data.dao.TaskDao
 import com.team.notify.taskflow.data.entities.OperationEntity
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
 import com.team.notify.taskflow.data.entities.PageEntity
 import com.team.notify.taskflow.data.entities.PageHistoryEntity
+import com.team.notify.taskflow.data.entities.SpaceMemberEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-val MIGRATION_3_4 = object : Migration(3, 4) {
+val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(database: SupportSQLiteDatabase) {
+        var hasVersion = false
+        database.query("PRAGMA table_info('pages')").use { c ->
+            val nameIndex = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
+                if (colName == "version") {
+                    hasVersion = true
+                    break
+                }
+            }
+        }
+        if (!hasVersion) {
+            database.execSQL("ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
+        }
 
-        database.execSQL(
-            "ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1"
-        )
+        val existingOpQueueCols = mutableSetOf<String>()
+        database.query("PRAGMA table_info('op_queue')").use { c ->
+            val nameIndex = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
+                if (colName != null) existingOpQueueCols.add(colName)
+            }
+        }
+
+        if (!existingOpQueueCols.contains("spaceId")) {
+            database.execSQL("ALTER TABLE op_queue ADD COLUMN spaceId TEXT NOT NULL DEFAULT 'undefined'")
+        }
+        if (!existingOpQueueCols.contains("userId")) {
+            database.execSQL("ALTER TABLE op_queue ADD COLUMN userId TEXT NOT NULL DEFAULT 'undefined'")
+        }
 
         database.execSQL(
             """
-            CREATE TABLE IF NOT EXISTS page_history (
-                id TEXT PRIMARY KEY NOT NULL,
-                pageId TEXT NOT NULL,
-                version INTEGER NOT NULL,
-                content TEXT NOT NULL,
-                timestamp INTEGER NOT NULL
+            CREATE TABLE IF NOT EXISTS space_members (
+                spaceId TEXT NOT NULL,
+                userId TEXT NOT NULL,
+                role TEXT NOT NULL,
+                PRIMARY KEY(spaceId, userId)
             )
             """.trimIndent()
         )
@@ -46,9 +73,11 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         SpaceEntity::class,
         OperationEntity::class,
         PageEntity::class,
-        PageHistoryEntity::class
+        PageHistoryEntity::class,
+        SpaceMemberEntity::class
+
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -58,6 +87,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun opQueueDao(): OpQueueDao
     abstract fun pageDao(): PageDao
     abstract fun pageHistoryDao(): PageHistoryDao
+    abstract fun spaceMemberDao(): SpaceMemberDao
+
 
     companion object {
 
@@ -139,6 +170,8 @@ abstract class AppDatabase : RoomDatabase() {
                     id = "op-${task.id}",
                     entityId = task.id,
                     entityType = "TASK",
+                    spaceId = task.spaceId,
+                    userId = "",
                     operation = "UPSERT",
                     payloadJson = "{}",
                     timestamp = now

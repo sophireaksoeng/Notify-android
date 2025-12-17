@@ -239,6 +239,8 @@ class OpQueueRepositoryImpl @Inject constructor(
             entityType = type,
             operation = "UPSERT",
             payloadJson = payload.toString(),
+            spaceId = "",
+            userId = "",
             timestamp = System.currentTimeMillis()
         )
         addOperation(op)
