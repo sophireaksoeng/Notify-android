@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.team.notify.taskflow.data.repository.interfaces.PageRepository
+import com.team.notify.taskflow.data.sync.RealtimeSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,7 +18,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PageListViewModel @Inject constructor(
-    private val repo: PageRepository
+    private val repo: PageRepository,
+    private val realtime: RealtimeSyncManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PageListUiState>(PageListUiState.Loading)
@@ -30,6 +32,15 @@ class PageListViewModel @Inject constructor(
 
     init {
         observePages()
+    }
+
+    fun onEnter(spaceId: String) {
+        realtime.start(spaceId)
+    }
+
+    override fun onCleared() {
+        realtime.stop()
+        super.onCleared()
     }
 
     private fun observePages() {

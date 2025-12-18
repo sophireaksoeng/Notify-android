@@ -11,5 +11,7 @@ data class PageEntity(
     val content: String?,
     val version: Int,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val isLoading: Boolean = false,
+    val hasConflict: Boolean = false
 )

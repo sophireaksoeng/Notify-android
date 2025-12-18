@@ -7,5 +7,7 @@ data class PageDetailUiState(
     val version: Int = 0,
     val description: String? = null,
     val createdAt: Long = 0L,
-    val updatedAt: Long = 0L
+    val updatedAt: Long = 0L,
+    val isLoading: Boolean = false,
+    val hasConflict: Boolean = false
 )

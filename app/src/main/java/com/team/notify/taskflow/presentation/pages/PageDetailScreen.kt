@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.team.notify.taskflow.presentation.common.ConflictBadge
 
 @Composable
 fun PageDetailScreen(
@@ -28,6 +29,16 @@ fun PageDetailScreen(
     }
 
     val state by viewModel.uiState.collectAsState()
+
+    if (state.hasConflict) {
+        ConflictBadge()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "This page was edited on another device.",
+            color = Color.Red
+        )
+        Spacer(Modifier.height(8.dp))
+    }
 
     Column(Modifier.padding(16.dp)) {
         if (!canEdit) {

@@ -1,16 +1,17 @@
 package com.team.notify.taskflow.data
 
-import android.content.Context
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.team.notify.taskflow.data.dao.ConflictDao
 import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.PageHistoryDao
 import com.team.notify.taskflow.data.dao.SpaceDao
 import com.team.notify.taskflow.data.dao.SpaceMemberDao
 import com.team.notify.taskflow.data.dao.TaskDao
+import com.team.notify.taskflow.data.entities.ConflictEntity
 import com.team.notify.taskflow.data.entities.OperationEntity
 import com.team.notify.taskflow.data.entities.SpaceEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
@@ -21,7 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-val MIGRATION_4_5 = object : Migration(4, 5) {
+val MIGRATION_5_6 = object : Migration(5, 6) {
     override fun migrate(database: SupportSQLiteDatabase) {
         var hasVersion = false
         database.query("PRAGMA table_info('pages')").use { c ->
@@ -36,6 +37,36 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         }
         if (!hasVersion) {
             database.execSQL("ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
+        }
+
+        var hasIsLoading = false
+        database.query("PRAGMA table_info('pages')").use { c ->
+            val nameIndex = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
+                if (colName == "isLoading") {
+                    hasIsLoading = true
+                    break
+                }
+            }
+        }
+        if (!hasIsLoading) {
+            database.execSQL("ALTER TABLE pages ADD COLUMN isLoading INTEGER NOT NULL DEFAULT 0")
+        }
+
+        var hasHasConflict = false
+        database.query("PRAGMA table_info('pages')").use { c ->
+            val nameIndex = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
+                if (colName == "hasConflict") {
+                    hasHasConflict = true
+                    break
+                }
+            }
+        }
+        if (!hasHasConflict) {
+            database.execSQL("ALTER TABLE pages ADD COLUMN hasConflict INTEGER NOT NULL DEFAULT 0")
         }
 
         val existingOpQueueCols = mutableSetOf<String>()
@@ -64,6 +95,19 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             )
             """.trimIndent()
         )
+
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS conflicts (
+                id TEXT PRIMARY KEY NOT NULL,
+                entityType TEXT NOT NULL,
+                entityId TEXT NOT NULL,
+                localVersion INTEGER NOT NULL,
+                remoteVersion INTEGER NOT NULL,
+                timestamp INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
     }
 }
 
@@ -74,10 +118,10 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         OperationEntity::class,
         PageEntity::class,
         PageHistoryEntity::class,
-        SpaceMemberEntity::class
-
+        SpaceMemberEntity::class,
+        ConflictEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -88,7 +132,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pageDao(): PageDao
     abstract fun pageHistoryDao(): PageHistoryDao
     abstract fun spaceMemberDao(): SpaceMemberDao
-
+    abstract fun conflictDao(): ConflictDao
 
     companion object {
 

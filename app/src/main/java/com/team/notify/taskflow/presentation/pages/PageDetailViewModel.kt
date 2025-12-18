@@ -31,7 +31,9 @@ class PageDetailViewModel @Inject constructor(
                         description = it.content,
                         version = it.version,
                         createdAt = it.createdAt,
-                        updatedAt = it.updatedAt
+                        updatedAt = it.updatedAt,
+                        content = it.content ?: "",
+                        hasConflict = it.hasConflict ?: false
                     )
                 }
             }
