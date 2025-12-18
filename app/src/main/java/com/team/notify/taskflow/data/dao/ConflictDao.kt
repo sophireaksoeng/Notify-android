@@ -15,4 +15,10 @@ interface ConflictDao {
 
     @Query("SELECT * FROM conflicts")
     fun getConflicts(): Flow<List<ConflictEntity>>
+
+    @Query("SELECT * FROM conflicts")
+    fun getUnresolved(): Flow<List<ConflictEntity>>
+
+    @Query("UPDATE conflicts SET resolved = 1 WHERE id = :id")
+    suspend fun markResolved(id: String)
 }

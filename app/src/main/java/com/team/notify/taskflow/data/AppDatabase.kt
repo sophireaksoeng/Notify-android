@@ -22,7 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-val MIGRATION_5_6 = object : Migration(5, 6) {
+val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(database: SupportSQLiteDatabase) {
         var hasVersion = false
         database.query("PRAGMA table_info('pages')").use { c ->
@@ -96,18 +96,32 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
             """.trimIndent()
         )
 
-        database.execSQL(
-            """
-            CREATE TABLE IF NOT EXISTS conflicts (
-                id TEXT PRIMARY KEY NOT NULL,
-                entityType TEXT NOT NULL,
-                entityId TEXT NOT NULL,
-                localVersion INTEGER NOT NULL,
-                remoteVersion INTEGER NOT NULL,
-                timestamp INTEGER NOT NULL
+        val existingConflictsCols = mutableSetOf<String>()
+        database.query("PRAGMA table_info('conflicts')").use { c ->
+            val nameIndex = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
+                if (colName != null) existingConflictsCols.add(colName)
+            }
+        }
+
+        if (existingConflictsCols.isEmpty()) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS conflicts (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    entityType TEXT NOT NULL,
+                    entityId TEXT NOT NULL,
+                    localVersion INTEGER NOT NULL,
+                    remoteVersion INTEGER NOT NULL,
+                    resolved INTEGER NOT NULL DEFAULT 0,
+                    timestamp INTEGER NOT NULL
+                )
+                """.trimIndent()
             )
-            """.trimIndent()
-        )
+        } else if (!existingConflictsCols.contains("resolved")) {
+            database.execSQL("ALTER TABLE conflicts ADD COLUMN resolved INTEGER NOT NULL DEFAULT 0")
+        }
     }
 }
 
@@ -121,7 +135,7 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         SpaceMemberEntity::class,
         ConflictEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

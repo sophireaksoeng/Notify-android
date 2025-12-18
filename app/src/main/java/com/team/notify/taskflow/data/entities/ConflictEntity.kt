@@ -10,5 +10,6 @@ data class ConflictEntity(
     val entityId: String,
     val localVersion: Int,
     val remoteVersion: Int,
+    val resolved: Boolean = false,
     val timestamp: Long
 )

@@ -13,6 +13,9 @@ interface PageHistoryDao {
     @Query("SELECT * FROM page_history WHERE pageId = :pageId ORDER BY timestamp DESC")
     fun getHistoryForPage(pageId: String): Flow<List<PageHistoryEntity>>
 
+    @Query("SELECT * FROM page_history WHERE pageId = :pageId ORDER BY version DESC")
+    fun getHistory(pageId: String): Flow<List<PageHistoryEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(history: PageHistoryEntity)
 

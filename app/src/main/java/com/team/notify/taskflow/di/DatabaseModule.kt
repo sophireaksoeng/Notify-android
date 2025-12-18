@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.team.notify.taskflow.data.AppDatabase
 import com.team.notify.taskflow.data.AppDatabaseHolder
-import com.team.notify.taskflow.data.MIGRATION_5_6
+import com.team.notify.taskflow.data.MIGRATION_6_7
 import com.team.notify.taskflow.data.dao.OpQueueDao
 import com.team.notify.taskflow.data.dao.PageDao
 import com.team.notify.taskflow.data.dao.PageHistoryDao
@@ -36,7 +36,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "notify-db"
         )
-            .addMigrations(MIGRATION_5_6)
+            .addMigrations(MIGRATION_6_7)
             .addCallback(AppDatabase.seedCallback())
             .build()
 
