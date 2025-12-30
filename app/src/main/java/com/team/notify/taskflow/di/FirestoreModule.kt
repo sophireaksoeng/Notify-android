@@ -13,7 +13,5 @@ object FirestoreModule {
 
     @Provides
     @Singleton
-    fun provideFirestore(): FirebaseFirestore {
-        return FirebaseFirestore.getInstance("notify-db")
-    }
+    fun provideFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 }

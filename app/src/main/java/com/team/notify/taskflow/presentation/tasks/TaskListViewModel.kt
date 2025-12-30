@@ -4,12 +4,11 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.team.notify.taskflow.data.dao.TaskDao
-import com.team.notify.taskflow.model.TaskStatus
 import com.team.notify.taskflow.mappers.toUiModel
 import com.team.notify.taskflow.presentation.tasks.TaskListUiState
 import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
 import com.team.notify.taskflow.data.sync.SyncScheduler
+import com.team.notify.taskflow.model.TaskStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,22 +25,13 @@ import javax.inject.Inject
 class TaskListViewModel @Inject constructor(
     private val repo: TaskRepository,
     savedStateHandle: SavedStateHandle,
-    private val taskDao: TaskDao,
     private val syncScheduler: SyncScheduler
 ) : ViewModel() {
 
-    init {
-        viewModelScope.launch {
-            val total = taskDao.countAllTasks()
-            Log.d("TaskListVM", "Total tasks in DB = $total")
-        }
-    }
-
     private val currentSpaceId: String =
-        savedStateHandle.get<String>("spaceId")?.takeIf { it.isNotBlank() } ?: "space-1"
+        savedStateHandle.get<String>("spaceId")?.takeIf { it.isNotBlank() } ?: "default-space"
 
     val tasks = repo.getTasksForSpace(currentSpaceId)
-        .map { list -> list.map { it.toUiModel() } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _uiState = MutableStateFlow<TaskListUiState>(TaskListUiState.Loading)
@@ -62,28 +51,28 @@ class TaskListViewModel @Inject constructor(
                     _uiState.value = TaskListUiState.Error(e.message ?: "Unknown error")
                 }
                 .collectLatest { entities ->
-                    Log.d("TaskListVM", "Collected ${entities.size} tasks for spaceId=$currentSpaceId")
-                    val tasks = entities.map { it.toUiModel() }
-                    _uiState.value = if (tasks.isEmpty()) {
+                    val uiTasks = entities.map { it.toUiModel() }
+                    _uiState.value = if (uiTasks.isEmpty()) {
                         TaskListUiState.Empty
                     } else {
-                        TaskListUiState.Data(tasks)
+                        TaskListUiState.Data(uiTasks)
                     }
                 }
         }
     }
 
     fun refresh(context: android.content.Context) {
-        syncScheduler.schedule(context, currentSpaceId)
+        syncScheduler.scheduleNow(context)
         observeTasks()
     }
 
     fun updateStatus(taskId: String, newStatus: TaskStatus) {
         viewModelScope.launch {
             val entity = repo.getTaskById(taskId).first() ?: return@launch
-            repo.insert(
+            repo.upsert(
                 entity.copy(
-                    status = newStatus.name,
+                    status = newStatus,
+                    isCompleted = (newStatus == TaskStatus.DONE),
                     updatedAt = System.currentTimeMillis()
                 )
             )

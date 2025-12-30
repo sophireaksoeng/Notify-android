@@ -1,12 +1,41 @@
-package com.team.notify.taskflow.data.converters
+package com.team.notify.taskflow.data
 
 import androidx.room.TypeConverter
-import java.util.Date
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.team.notify.taskflow.model.TaskStatus
 
 class Converters {
+
+    private val gson = Gson()
     @TypeConverter
-    fun fromDate(value: Date?): Long? = value?.time
+    fun taskStatusToString(status: TaskStatus?): String? {
+        return status?.name
+    }
 
     @TypeConverter
-    fun toDate(value: Long?): Date? = value?.let { Date(it) }
+    fun stringToTaskStatus(value: String?): TaskStatus? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            TaskStatus.valueOf(value)
+        } catch (_: Exception) {
+            TaskStatus.TODO
+        }
+    }
+
+    @TypeConverter
+    fun stringListToJson(list: List<String>?): String? {
+        return if (list == null) null else gson.toJson(list)
+    }
+
+    @TypeConverter
+    fun jsonToStringList(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = object : TypeToken<List<String>>() {}.type
+            gson.fromJson<List<String>>(json, type) ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 }

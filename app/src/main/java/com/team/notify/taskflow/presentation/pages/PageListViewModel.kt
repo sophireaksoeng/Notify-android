@@ -3,82 +3,76 @@ package com.team.notify.taskflow.presentation.pages
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.team.notify.taskflow.data.entities.PageEntity
 import com.team.notify.taskflow.data.repository.interfaces.PageRepository
-import com.team.notify.taskflow.data.sync.RealtimeSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class PageListViewModel @Inject constructor(
-    private val repo: PageRepository,
-    private val realtime: RealtimeSyncManager
+    private val repo: PageRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<PageListUiState>(PageListUiState.Loading)
-    val uiState: StateFlow<PageListUiState> = _uiState
+    private val spaceIdFlow = MutableStateFlow("default-space")
 
-    private var currentSpaceId: String = "space-1"
+    val pages: StateFlow<List<PageEntity>> =
+        spaceIdFlow
+            .flatMapLatest { sid -> repo.getPagesForSpace(sid) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val pages = repo.getPagesForSpace(currentSpaceId)
-        .stateIn(viewModelScope, SharingStarted.Companion.Lazily, emptyList())
-
-    init {
-        observePages()
-    }
+    val uiState: StateFlow<PageListUiState> =
+        pages
+            .map { list ->
+                if (list.isEmpty()) PageListUiState.Empty
+                else PageListUiState.Data(list.sortedBy { it.title })
+            }
+            .catch { e ->
+                Log.e("PageListVM", "Error", e)
+                emit(PageListUiState.Error(e.message ?: "Unknown error"))
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PageListUiState.Loading)
 
     fun onEnter(spaceId: String) {
-        realtime.start(spaceId)
+        spaceIdFlow.value = spaceId
     }
 
-    override fun onCleared() {
-        realtime.stop()
-        super.onCleared()
-    }
-
-    private fun observePages() {
+    fun createPage(title: String = "Untitled", onCreated: (String) -> Unit) {
         viewModelScope.launch {
-            repo.getPagesForSpace(currentSpaceId)
-                .map { it.sortedBy { p -> p.title } }
-                .onStart { _uiState.value = PageListUiState.Loading }
-                .catch { e ->
-                    Log.e("PageListVM", "Error observing pages", e)
-                    _uiState.value = PageListUiState.Error(e.message ?: "Unknown")
-                }
-                .collect { list ->
-                    _uiState.value = if (list.isEmpty()) {
-                        PageListUiState.Empty
-                    } else {
-                        PageListUiState.Data(list)
-                    }
-                }
+            try {
+                val id = UUID.randomUUID().toString()
+                val now = System.currentTimeMillis()
+                repo.insert(
+                    PageEntity(
+                        id = id,
+                        spaceId = spaceIdFlow.value,
+                        title = title,
+                        content = "",
+                        version = 1,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                )
+                onCreated(id)
+            } catch (e: Exception) {
+                Log.e("PageListVM", "createPage failed", e)
+            }
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            try {
-                repo.pullRemoteChanges(currentSpaceId)
-            } catch (e: Exception) {
-                Log.w("PageListVM", "refresh failed: ${e.message}")
-            }
+            runCatching { repo.pullRemoteChanges(spaceIdFlow.value) }
+                .onFailure { Log.w("PageListVM", "refresh failed: ${it.message}") }
         }
     }
 
     fun deletePage(pageId: String) {
         viewModelScope.launch {
-            try {
-                repo.deleteById(pageId)
-            } catch (e: Exception) {
-                Log.w("PageListVM", "delete failed: ${e.message}")
-            }
+            runCatching { repo.deleteById(pageId) }
+                .onFailure { Log.w("PageListVM", "delete failed: ${it.message}") }
         }
     }
 }

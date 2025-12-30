@@ -18,4 +18,7 @@ interface TaskRepository {
     suspend fun upsert(task: TaskEntity)
     fun startRealtimeListener(spaceId: String)
     fun startRealtimeSync(spaceId: String)
+    fun tasks(spaceId: String, query: String): Flow<List<TaskEntity>>
+    fun task(id: String): Flow<TaskEntity?>
+    suspend fun delete(id: String)
 }

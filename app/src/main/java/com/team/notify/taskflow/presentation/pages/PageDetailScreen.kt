@@ -1,76 +1,80 @@
 package com.team.notify.taskflow.presentation.pages
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.team.notify.taskflow.presentation.common.ConflictBadge
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.team.notify.taskflow.ui.NotionBodyField
+import com.team.notify.taskflow.ui.NotionDivider
+import com.team.notify.taskflow.ui.NotionPageHeader
 
 @Composable
 fun PageDetailScreen(
     pageId: String?,
     spaceId: String,
-    viewModel: PageDetailViewModel,
-    onSaved: () -> Unit,
-    canEdit: Boolean
+    onBack: () -> Unit,
+    vm: PageDetailViewModel = hiltViewModel()
 ) {
+    val state by vm.uiState.collectAsState()
+    val saving by vm.saving.collectAsState()
+
     LaunchedEffect(pageId) {
-        viewModel.load(pageId)
+        vm.load(pageId)
     }
 
-    val state by viewModel.uiState.collectAsState()
-
-    if (state.hasConflict) {
-        ConflictBadge()
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "This page was edited on another device.",
-            color = Color.Red
-        )
-        Spacer(Modifier.height(8.dp))
+    if (pageId == null) {
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Select a page to start",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+        return
     }
 
-    Column(Modifier.padding(16.dp)) {
-        if (!canEdit) {
-            Text("Read-only mode", color = Color.Red)
-            Spacer(Modifier.height(8.dp))
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .widthIn(max = 900.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onBack) { Text("Back") }
+            Spacer(Modifier.weight(1f))
+            if (saving) {
+                Text(
+                    "Saving…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                )
+            }
+            TextButton(onClick = { vm.save(spaceId) }) { Text("Save") }
         }
 
-        OutlinedTextField(
-            value = state.title,
-            onValueChange = { viewModel.updateTitle(it) },
-            label = { Text("Page Title") },
-            enabled = canEdit
+        Spacer(Modifier.height(8.dp))
+        NotionDivider()
+        Spacer(Modifier.height(12.dp))
+
+        NotionPageHeader(
+            emoji = "📄",
+            title = state.title,
+            onTitleChange = { vm.updateTitle(it) }
         )
 
         Spacer(Modifier.height(12.dp))
 
-        PageContentEditor(
-            content = state.content,
-            onContentChange = { viewModel.updateContent(it) },
-            enabled = canEdit
+        NotionBodyField(
+            value = state.description,
+            onValueChange = { vm.updateDescription(it) },
+            placeholder = "Type / for blocks…",
+            minLines = 12
         )
-
-        Spacer(Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                viewModel.save(spaceId)
-                onSaved()
-            },
-            enabled = canEdit
-        ) {
-            Text("Save")
-        }
     }
 }

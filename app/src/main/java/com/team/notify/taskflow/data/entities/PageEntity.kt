@@ -8,10 +8,9 @@ data class PageEntity(
     @PrimaryKey val id: String,
     val spaceId: String,
     val title: String,
-    val content: String?,
-    val version: Int,
-    val createdAt: Long,
-    val updatedAt: Long,
-    val isLoading: Boolean = false,
-    val hasConflict: Boolean = false
+    val content: String? = "",
+    val version: Long = 1,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val hasConflict: Boolean? = false
 )

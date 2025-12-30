@@ -1,241 +1,111 @@
 package com.team.notify.taskflow.data
 
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
+import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.team.notify.taskflow.data.dao.ConflictDao
-import com.team.notify.taskflow.data.dao.OpQueueDao
-import com.team.notify.taskflow.data.dao.PageDao
-import com.team.notify.taskflow.data.dao.PageHistoryDao
-import com.team.notify.taskflow.data.dao.SpaceDao
-import com.team.notify.taskflow.data.dao.SpaceMemberDao
-import com.team.notify.taskflow.data.dao.TaskDao
-import com.team.notify.taskflow.data.entities.ConflictEntity
-import com.team.notify.taskflow.data.entities.OperationEntity
-import com.team.notify.taskflow.data.entities.SpaceEntity
-import com.team.notify.taskflow.data.entities.TaskEntity
-import com.team.notify.taskflow.data.entities.PageEntity
-import com.team.notify.taskflow.data.entities.PageHistoryEntity
-import com.team.notify.taskflow.data.entities.SpaceMemberEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.team.notify.taskflow.data.dao.*
+import com.team.notify.taskflow.data.entities.*
 
-val MIGRATION_6_7 = object : Migration(6, 7) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        var hasVersion = false
-        database.query("PRAGMA table_info('pages')").use { c ->
-            val nameIndex = c.getColumnIndex("name")
-            while (c.moveToNext()) {
-                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
-                if (colName == "version") {
-                    hasVersion = true
-                    break
-                }
-            }
-        }
-        if (!hasVersion) {
-            database.execSQL("ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
-        }
-
-        var hasIsLoading = false
-        database.query("PRAGMA table_info('pages')").use { c ->
-            val nameIndex = c.getColumnIndex("name")
-            while (c.moveToNext()) {
-                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
-                if (colName == "isLoading") {
-                    hasIsLoading = true
-                    break
-                }
-            }
-        }
-        if (!hasIsLoading) {
-            database.execSQL("ALTER TABLE pages ADD COLUMN isLoading INTEGER NOT NULL DEFAULT 0")
-        }
-
-        var hasHasConflict = false
-        database.query("PRAGMA table_info('pages')").use { c ->
-            val nameIndex = c.getColumnIndex("name")
-            while (c.moveToNext()) {
-                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
-                if (colName == "hasConflict") {
-                    hasHasConflict = true
-                    break
-                }
-            }
-        }
-        if (!hasHasConflict) {
-            database.execSQL("ALTER TABLE pages ADD COLUMN hasConflict INTEGER NOT NULL DEFAULT 0")
-        }
-
-        val existingOpQueueCols = mutableSetOf<String>()
-        database.query("PRAGMA table_info('op_queue')").use { c ->
-            val nameIndex = c.getColumnIndex("name")
-            while (c.moveToNext()) {
-                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
-                if (colName != null) existingOpQueueCols.add(colName)
-            }
-        }
-
-        if (!existingOpQueueCols.contains("spaceId")) {
-            database.execSQL("ALTER TABLE op_queue ADD COLUMN spaceId TEXT NOT NULL DEFAULT 'undefined'")
-        }
-        if (!existingOpQueueCols.contains("userId")) {
-            database.execSQL("ALTER TABLE op_queue ADD COLUMN userId TEXT NOT NULL DEFAULT 'undefined'")
-        }
-
-        database.execSQL(
-            """
-            CREATE TABLE IF NOT EXISTS space_members (
-                spaceId TEXT NOT NULL,
-                userId TEXT NOT NULL,
-                role TEXT NOT NULL,
-                PRIMARY KEY(spaceId, userId)
-            )
-            """.trimIndent()
-        )
-
-        val existingConflictsCols = mutableSetOf<String>()
-        database.query("PRAGMA table_info('conflicts')").use { c ->
-            val nameIndex = c.getColumnIndex("name")
-            while (c.moveToNext()) {
-                val colName = if (nameIndex != -1) c.getString(nameIndex) else null
-                if (colName != null) existingConflictsCols.add(colName)
-            }
-        }
-
-        if (existingConflictsCols.isEmpty()) {
-            database.execSQL(
-                """
-                CREATE TABLE IF NOT EXISTS conflicts (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    entityType TEXT NOT NULL,
-                    entityId TEXT NOT NULL,
-                    localVersion INTEGER NOT NULL,
-                    remoteVersion INTEGER NOT NULL,
-                    resolved INTEGER NOT NULL DEFAULT 0,
-                    timestamp INTEGER NOT NULL
-                )
-                """.trimIndent()
-            )
-        } else if (!existingConflictsCols.contains("resolved")) {
-            database.execSQL("ALTER TABLE conflicts ADD COLUMN resolved INTEGER NOT NULL DEFAULT 0")
-        }
-    }
-}
-
+@TypeConverters(Converters::class)
 @Database(
     entities = [
-        TaskEntity::class,
+        UserEntity::class,
         SpaceEntity::class,
-        OperationEntity::class,
         PageEntity::class,
-        PageHistoryEntity::class,
+        TaskEntity::class,
+        OperationEntity::class,
+        SyncStateEntity::class,
+        HistoryEntity::class,
+        AttachmentEntity::class,
         SpaceMemberEntity::class,
-        ConflictEntity::class
     ],
-    version = 7,
-    exportSchema = true
+    version = 5,
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-
-    abstract fun taskDao(): TaskDao
+    abstract fun userDao(): UserDao
     abstract fun spaceDao(): SpaceDao
-    abstract fun opQueueDao(): OpQueueDao
     abstract fun pageDao(): PageDao
-    abstract fun pageHistoryDao(): PageHistoryDao
+    abstract fun taskDao(): TaskDao
+    abstract fun opQueueDao(): OpQueueDao
+    abstract fun syncStateDao(): SyncStateDao
+    abstract fun historyDao(): HistoryDao
+    abstract fun attachmentDao(): AttachmentDao
     abstract fun spaceMemberDao(): SpaceMemberDao
-    abstract fun conflictDao(): ConflictDao
+
 
     companion object {
+        fun build(context: Context): AppDatabase {
+            return Room.databaseBuilder(context, AppDatabase::class.java, "notify.db")
+                .fallbackToDestructiveMigration()
+                .addCallback(AppDatabase.seedCallback())
+                .build()
+        }
 
         fun seedCallback(): Callback {
             return object : Callback() {
+
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
+                    seedIfEmpty(db)
+                }
 
-                    val roomDb = AppDatabaseHolder.database
-                        ?: return
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    seedIfEmpty(db)
+                }
 
-                    CoroutineScope(Dispatchers.IO).launch {
-                        seedDatabase(roomDb)
+                private fun seedIfEmpty(db: SupportSQLiteDatabase) {
+                    val c = db.query("SELECT COUNT(*) FROM spaces")
+                    c.moveToFirst()
+                    val count = c.getInt(0)
+                    c.close()
 
-                        val tasks = roomDb.taskDao().getAllTasksDebug()
-                        android.util.Log.d(
-                            "AppDatabase",
-                            "Debug tasks after seeding count=${tasks.size}, tasks=$tasks"
-                        )
-                    }
+                    if (count > 0) return
+
+                    db.execSQL("""
+                INSERT INTO spaces (id, name, description, createdAt, updatedAt)
+                VALUES ('default-space', 'Notify Workspace', 'Demo workspace', 0, 0)
+            """)
+
+                    db.execSQL("""
+                INSERT INTO pages (id, spaceId, title, content, version, createdAt, updatedAt)
+                VALUES
+                ('page-1', 'default-space', 'Welcome', 'This is a demo page.\nExplore the UI like Notion.', 1, 0, 0),
+                ('page-2', 'default-space', 'Meeting Notes', '• Agenda\n• Decisions\n• Action items', 1, 0, 0),
+                ('page-3', 'default-space', 'Project Plan', 'Week 1–12 roadmap…', 1, 0, 0)
+            """)
+
+                    db.execSQL("""
+                INSERT INTO tasks (
+                    id, spaceId, title, description, status,
+                    deadline, completed, assigneeUserId, labels,
+                    titleUpdatedAt, descriptionUpdatedAt, statusUpdatedAt,
+                    deadlineUpdatedAt, completedUpdatedAt, assigneeUpdatedAt, labelsUpdatedAt,
+                    updatedAt
+                )
+                VALUES
+                ('task-1', 'default-space', 'Explore the UI', 'Click around like Notion', 'TODO',
+                 NULL, 0, NULL, '[]',
+                 0, 0, 0, 0, 0, 0, 0,
+                 0),
+
+                ('task-2', 'default-space', 'Test dark mode', 'Switch system theme to dark', 'DOING',
+                 NULL, 0, NULL, '[]',
+                 0, 0, 0, 0, 0, 0, 0,
+                 0),
+
+                ('task-3', 'default-space', 'Finish Role B/C UI', 'Drawer + tasks list + page editor', 'DONE',
+                 NULL, 1, NULL, '[]',
+                 0, 0, 0, 0, 0, 0, 0,
+                 0)
+            """)
                 }
             }
         }
 
-        suspend fun seedDatabase(db: AppDatabase) {
-            android.util.Log.d("AppDatabase", "Seeding test data...")
-            val spaceDao = db.spaceDao()
-            val taskDao = db.taskDao()
-            val opDao = db.opQueueDao()
-
-            val now = System.currentTimeMillis()
-
-            val defaultSpace = SpaceEntity(
-                id = "space-1",
-                name = "Demo Space",
-                description = "Space for seed test data",
-                createdAt = now,
-                updatedAt = now
-            )
-            spaceDao.insert(defaultSpace)
-
-            val tasks = listOf(
-                TaskEntity(
-                    id = "task-1",
-                    spaceId = defaultSpace.id,
-                    title = "Buy groceries",
-                    description = "Milk, bread, eggs",
-                    status = "TODO",
-                    deadline = now + 24 * 60 * 60 * 1000L,
-                    isCompleted = false,
-                    updatedAt = now
-                ),
-                TaskEntity(
-                    id = "task-2",
-                    spaceId = defaultSpace.id,
-                    title = "Finish report",
-                    description = "Monthly financial report",
-                    status = "IN_PROGRESS",
-                    deadline = now + 2 * 24 * 60 * 60 * 1000L,
-                    isCompleted = false,
-                    updatedAt = now
-                ),
-                TaskEntity(
-                    id = "task-3",
-                    spaceId = defaultSpace.id,
-                    title = "Call client",
-                    description = "Follow up on integration",
-                    status = "DONE",
-                    deadline = now - 24 * 60 * 60 * 1000L,
-                    isCompleted = true,
-                    updatedAt = now
-                )
-            )
-
-            tasks.forEach { taskDao.insert(it) }
-
-            val ops = tasks.map { task ->
-                OperationEntity(
-                    id = "op-${task.id}",
-                    entityId = task.id,
-                    entityType = "TASK",
-                    spaceId = task.spaceId,
-                    userId = "",
-                    operation = "UPSERT",
-                    payloadJson = "{}",
-                    timestamp = now
-                )
-            }
-            ops.forEach { opDao.insert(it) }
-        }
     }
 }

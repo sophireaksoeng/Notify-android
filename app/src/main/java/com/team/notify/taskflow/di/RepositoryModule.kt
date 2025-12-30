@@ -1,9 +1,9 @@
 package com.team.notify.taskflow.di
 
-import com.team.notify.taskflow.data.repository.TaskRepositoryImpl
+import com.team.notify.taskflow.data.repository.room.RoomPageRepository
+import com.team.notify.taskflow.data.repository.interfaces.PageRepository
 import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
-import com.team.notify.taskflow.data.repository.OpQueueRepositoryImpl
-import com.team.notify.taskflow.data.repository.interfaces.OpQueueRepository
+import com.team.notify.taskflow.data.repository.room.RoomTaskRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -16,13 +16,13 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindTaskRepository(
-        impl: TaskRepositoryImpl
-    ): TaskRepository
+    abstract fun bindPageRepository(
+        impl: RoomPageRepository
+    ): PageRepository
 
     @Binds
     @Singleton
-    abstract fun bindOpQueueRepository(
-        impl: OpQueueRepositoryImpl
-    ): OpQueueRepository
+    abstract fun bindTaskRepository(
+        impl: RoomTaskRepository
+    ): TaskRepository
 }

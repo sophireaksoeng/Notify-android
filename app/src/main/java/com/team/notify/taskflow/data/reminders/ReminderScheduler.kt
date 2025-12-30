@@ -6,6 +6,9 @@ import com.team.notify.taskflow.data.dao.TaskDao
 import java.util.concurrent.TimeUnit
 
 object ReminderScheduler {
+    fun schedule(context: Context, taskId: String, dueMillis: Long) {
+        scheduleReminder(context, taskId, dueMillis)
+    }
 
     fun scheduleReminder(context: Context, taskId: String, dueMillis: Long) {
         val delay = dueMillis - System.currentTimeMillis()
@@ -31,10 +34,8 @@ object ReminderScheduler {
     suspend fun rescheduleAll(context: Context, taskDao: TaskDao) {
         val tasks = taskDao.getAllTasksDebug()
         for (task in tasks) {
-            task.deadline?.let {
-                if (!task.isCompleted) {
-                    scheduleReminder(context, task.id, it)
-                }
+            task.deadline?.let { due ->
+                if (!task.isCompleted) scheduleReminder(context, task.id, due)
             }
         }
     }

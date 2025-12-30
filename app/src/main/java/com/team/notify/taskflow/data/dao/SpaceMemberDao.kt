@@ -11,11 +11,14 @@ import kotlinx.coroutines.flow.Flow
 interface SpaceMemberDao {
 
     @Query("SELECT * FROM space_members WHERE spaceId = :spaceId")
-    fun getMembers(spaceId: String): Flow<List<SpaceMemberEntity>>
+    fun membersForSpace(spaceId: String): Flow<List<SpaceMemberEntity>>
 
-    @Query("SELECT * FROM space_members WHERE spaceId = :spaceId AND userId = :userId")
+    @Query("SELECT * FROM space_members WHERE spaceId = :spaceId AND userId = :userId LIMIT 1")
     suspend fun getMember(spaceId: String, userId: String): SpaceMemberEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(member: SpaceMemberEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<SpaceMemberEntity>)
 }

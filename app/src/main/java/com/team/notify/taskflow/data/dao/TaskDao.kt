@@ -9,17 +9,20 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks WHERE spaceId = :spaceId ORDER BY (deadline IS NULL), deadline ASC")
-    fun getTasksForSpace(spaceId: String): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE spaceId = :spaceId ORDER BY updatedAt DESC")
-    fun getTasks(spaceId: String): Flow<List<TaskEntity>>
+    fun getTasksForSpace(spaceId: String): Flow<List<TaskEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(task: TaskEntity)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(tasks: List<TaskEntity>)
+    @Query("""
+        SELECT * FROM tasks 
+        WHERE spaceId = :spaceId 
+        AND (
+            title LIKE '%' || :q || '%' 
+            OR description LIKE '%' || :q || '%'
+        )
+        ORDER BY updatedAt DESC
+    """)
+    fun searchTasks(spaceId: String, q: String): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     fun getTaskById(id: String): Flow<TaskEntity?>
@@ -27,15 +30,11 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     suspend fun getTaskByIdOnce(id: String): TaskEntity?
 
-    @Query("""
-        SELECT * FROM tasks
-        WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%'
-        ORDER BY (deadline IS NULL), deadline ASC
-    """)
-    fun searchTasks(query: String): Flow<List<TaskEntity>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(task: TaskEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(task: TaskEntity)
+    suspend fun upsertAll(tasks: List<TaskEntity>)
 
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun deleteById(id: String)
@@ -43,9 +42,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks")
     suspend fun getAllTasksDebug(): List<TaskEntity>
 
-    @Query("UPDATE tasks SET status = :status, updatedAt = :updatedAt WHERE id = :taskId")
-    suspend fun updateStatus(taskId: String, status: String, updatedAt: Long = System.currentTimeMillis())
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(task: TaskEntity)
 
-    @Query("SELECT COUNT(*) FROM tasks")
-    suspend fun countAllTasks(): Int
+    @Query("SELECT COUNT(*) FROM tasks WHERE spaceId = :spaceId")
+    suspend fun countForSpace(spaceId: String): Int
 }

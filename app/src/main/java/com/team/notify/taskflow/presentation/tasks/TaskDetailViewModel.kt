@@ -4,20 +4,20 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.*
-import com.team.notify.taskflow.mappers.toUiModel
-import com.team.notify.taskflow.model.Task
-import com.team.notify.taskflow.model.TaskStatus
-import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
 import com.team.notify.taskflow.data.entities.TaskEntity
 import com.team.notify.taskflow.data.reminders.ReminderScheduler
 import com.team.notify.taskflow.data.reminders.TaskReminderWorker
+import com.team.notify.taskflow.data.repository.interfaces.TaskRepository
+import com.team.notify.taskflow.mappers.toUiModel
+import com.team.notify.taskflow.model.Task
+import com.team.notify.taskflow.model.TaskStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -29,7 +29,8 @@ class TaskDetailViewModel @Inject constructor(
     private val appContext: Context
 ) : ViewModel() {
 
-    private val spaceId = ""
+    private val spaceId = "default-space"
+
     private val _uiState = MutableStateFlow<Task?>(null)
     val uiState = _uiState.asStateFlow()
 
@@ -49,8 +50,7 @@ class TaskDetailViewModel @Inject constructor(
 
     fun updateTitle(newTitle: String) {
         val t = _uiState.value ?: return
-        val updated = t.copy(title = newTitle)
-        _uiState.value = updated
+        _uiState.value = t.copy(title = newTitle)
     }
 
     fun updateDescription(newDesc: String) {
@@ -74,7 +74,7 @@ class TaskDetailViewModel @Inject constructor(
                 spaceId = spaceId,
                 title = current.title,
                 description = current.description,
-                status = current.status.name,
+                status = current.status,
                 deadline = deadlineMillis,
                 isCompleted = current.status == TaskStatus.DONE,
                 updatedAt = now
@@ -116,7 +116,8 @@ class TaskDetailViewModel @Inject constructor(
             val old = repo.getTaskById(taskId).first() ?: return@launch
 
             val entity = old.copy(
-                status = newStatus.name,
+                status = newStatus,
+                isCompleted = (newStatus == TaskStatus.DONE),
                 updatedAt = now
             )
 

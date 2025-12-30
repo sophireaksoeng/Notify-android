@@ -6,43 +6,32 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.firebase.firestore.FirebaseFirestore
 import com.team.notify.taskflow.data.dao.PageDao
+import com.team.notify.taskflow.data.dao.SpaceDao
+import com.team.notify.taskflow.data.dao.SyncStateDao
 import com.team.notify.taskflow.data.dao.TaskDao
-import com.team.notify.taskflow.data.dao.SpaceMemberDao
 import com.team.notify.taskflow.data.entities.PageEntity
+import com.team.notify.taskflow.data.entities.SyncStateEntity
 import com.team.notify.taskflow.data.entities.TaskEntity
-import com.team.notify.taskflow.data.entities.SpaceMemberEntity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @HiltWorker
 class SyncPullWorker @AssistedInject constructor(
-    @Assisted val context: Context,
-    @Assisted workerParams: WorkerParameters,
+    @Assisted context: Context,
+    @Assisted params: WorkerParameters,
     private val firestore: FirebaseFirestore,
+    private val spaceDao: SpaceDao,
     private val taskDao: TaskDao,
     private val pageDao: PageDao,
-    private val spaceMemberDao: SpaceMemberDao
-) : CoroutineWorker(context, workerParams) {
+    private val syncStateDao: SyncStateDao
+) : CoroutineWorker(context, params) {
 
-    override suspend fun doWork(): Result {
-        return try {
-            pullAllMembers()
-
-            pullPages()
-            val snapshot = firestore.collection("tasks").get().await()
-            val remoteTasks: List<TaskEntity> = snapshot.toObjects(TaskEntity::class.java)
-
-            for (remote in remoteTasks) {
-                val local = taskDao.getTaskByIdOnce(remote.id)
-
-                val chosen: TaskEntity = if (local == null) {
-                    remote
-                } else {
-                    SyncConflictResolver.resolveTaskConflict(local, remote)
-                }
-
-                taskDao.upsert(chosen)
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        try {
+            spaceDao.getAllSpacesOnce().forEach { space ->
+                pullSpace(space.id)
             }
             Result.success()
         } catch (e: Exception) {
@@ -50,47 +39,37 @@ class SyncPullWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun pullAllMembers() {
-        val spacesSnapshot = firestore.collection("spaces").get().await()
-        for (spaceDoc in spacesSnapshot.documents) {
-            val spaceId = spaceDoc.id
-            pullMembers(spaceId)
-        }
-    }
+    private suspend fun pullSpace(spaceId: String) {
+        val lastPulled = syncStateDao.get(spaceId)?.lastPulledAt ?: 0L
+        val spaceRef = firestore.collection("spaces").document(spaceId)
 
-    private suspend fun pullMembers(spaceId: String) {
-        val snapshot = firestore
-            .collection("spaces")
-            .document(spaceId)
-            .collection("members")
+
+        val taskSnap = spaceRef.collection("tasks")
+            .whereGreaterThan("updatedAt", lastPulled)
             .get()
-            .await()
+            .awaitCompat()
 
-        for (doc in snapshot.documents) {
-            spaceMemberDao.upsert(
-                SpaceMemberEntity(
-                    spaceId = spaceId,
-                    userId = doc.id,
-                    role = doc.getString("role") ?: "VIEWER"
-                )
-            )
-        }
-    }
-
-    private suspend fun pullPages() {
-        val snapshot = firestore.collection("pages").get().await()
-        val remotePages: List<PageEntity> = snapshot.toObjects(PageEntity::class.java)
-
-        for (remote in remotePages) {
-            val local = pageDao.getPageByIdOnce(remote.id)
-
-            val chosen: PageEntity = if (local == null) {
-                remote
-            } else {
-                if (remote.updatedAt > local.updatedAt) remote else local
+        taskSnap.toObjects(TaskEntity::class.java).forEach { remote ->
+            val local = taskDao.getTaskByIdOnce(remote.id)
+            if (local == null || remote.updatedAt > local.updatedAt) {
+                taskDao.upsert(remote)
             }
-
-            pageDao.upsert(chosen)
         }
+
+        val pageSnap = spaceRef.collection("pages")
+            .whereGreaterThan("updatedAt", lastPulled)
+            .get()
+            .awaitCompat()
+
+        pageSnap.toObjects(PageEntity::class.java).forEach { remote ->
+            val local = pageDao.getByIdOnce(remote.id)
+            if (local == null || remote.updatedAt > local.updatedAt) {
+                pageDao.upsert(remote)
+            }
+        }
+
+        syncStateDao.upsert(
+            SyncStateEntity(spaceId, System.currentTimeMillis())
+        )
     }
 }

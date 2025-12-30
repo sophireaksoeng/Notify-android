@@ -15,9 +15,15 @@ interface SpaceDao {
     @Query("SELECT * FROM spaces WHERE id = :id LIMIT 1")
     fun getSpaceById(id: String): Flow<SpaceEntity?>
 
+    @Query("SELECT * FROM spaces")
+    suspend fun getAllSpacesOnce(): List<SpaceEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(space: SpaceEntity)
 
     @Query("DELETE FROM spaces WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT COUNT(*) FROM spaces")
+    suspend fun count(): Int
 }

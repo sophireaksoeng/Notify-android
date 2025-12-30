@@ -6,70 +6,54 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.firebase.firestore.FirebaseFirestore
 import com.team.notify.taskflow.data.dao.OpQueueDao
-import com.team.notify.taskflow.data.dao.PageDao
-import com.team.notify.taskflow.data.dao.TaskDao
-import com.team.notify.taskflow.data.entities.OperationEntity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 @HiltWorker
 class SyncPushWorker @AssistedInject constructor(
-    @Assisted private val context: Context,
-    @Assisted workerParams: WorkerParameters,
+    @Assisted context: Context,
+    @Assisted params: WorkerParameters,
     private val firestore: FirebaseFirestore,
-    private val opDao: OpQueueDao,
-    private val taskDao: TaskDao,
-    private val pageDao: PageDao,
-    private val permissionChecker: PermissionChecker
-) : CoroutineWorker(context, workerParams) {
+    private val opDao: OpQueueDao
+) : CoroutineWorker(context, params) {
 
-    override suspend fun doWork(): Result {
-        val operations: List<OperationEntity> =
-            opDao.getAllOperations().firstOrNull() ?: emptyList()
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val ops = opDao.loadBatch(25)
 
-        for (op in operations) {
-            try {
-                if (!permissionChecker.canEdit(op.spaceId, op.userId)) {
-                    opDao.deleteById(op.id)
-                    continue
+        try {
+            for (op in ops) {
+                val docRef = firestore
+                    .collection("spaces")
+                    .document(op.spaceId)
+                    .collection(op.entityType)
+                    .document(op.entityId)
+
+                when (op.operation) {
+                    "UPSERT" -> {
+                        val data = JSONObject(op.payloadJson)
+                        docRef.set(data.toMap()).awaitCompat()
+                    }
+                    "DELETE" -> {
+                        docRef.delete().awaitCompat()
+                    }
                 }
 
-                pushOperation(op)
                 opDao.deleteById(op.id)
-            } catch (e: Exception) {
-                return Result.retry()
             }
-        }
 
-        return Result.success()
-    }
-
-    private suspend fun pushOperation(op: OperationEntity) {
-        when (op.entityType) {
-            "TASK" -> pushTask(op)
-            "PAGE" -> pushPage(op)
-            else -> {
+            opDao.dropTooManyFailures(5)
+            Result.success()
+        } catch (e: Exception) {
+            ops.forEach {
+                opDao.markFailed(it.id, e.message ?: "Unknown error")
             }
+            Result.retry()
         }
-    }
-
-    private suspend fun pushTask(op: OperationEntity) {
-        val task = taskDao.getTaskByIdOnce(op.entityId) ?: return
-        firestore
-            .collection("tasks")
-            .document(task.id)
-            .set(task)
-            .await()
-    }
-
-    private suspend fun pushPage(op: OperationEntity) {
-        val page = pageDao.getPageByIdOnce(op.entityId) ?: return
-        firestore
-            .collection("pages")
-            .document(page.id)
-            .set(page)
-            .await()
     }
 }
+
+private fun JSONObject.toMap(): Map<String, Any?> =
+    keys().asSequence().associateWith { get(it) }
