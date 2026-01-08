@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "298648700718",
+    "project_id": "notify-899ed",
+    "storage_bucket": "notify-899ed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298648700718:android:0da7c916ae546051cb9cbf",
+        "android_client_info": {
+          "package_name": "com.team.notify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB59LW-WTT-gr8BkNnipAERh_scfr4N5O0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
