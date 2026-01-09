@@ -1,0 +1,1155 @@
+package com.team.notify.taskflow.presentation.workspace
+
+import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.team.notify.taskflow.data.sync.SyncViewModel
+import com.team.notify.taskflow.presentation.pages.PageDetailScreen
+import com.team.notify.taskflow.presentation.pages.PageListViewModel
+import com.team.notify.taskflow.presentation.tasks.TaskDetailScreen
+import com.team.notify.taskflow.presentation.tasks.TaskViewModel
+import com.team.notify.taskflow.presentation.notes.NotesPageScreen
+import com.team.notify.taskflow.presentation.document.DocumentPageScreen
+import com.team.notify.taskflow.model.PageType
+import com.team.notify.taskflow.ui.BreadcrumbHeader
+import com.team.notify.taskflow.ui.NotionShell
+import com.team.notify.taskflow.ui.NotionSidebar
+import com.team.notify.taskflow.ui.PageListView
+import com.team.notify.taskflow.ui.TaskListView
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkspaceScreen(
+    spaceId: String = "notify-db",
+    vmPages: PageListViewModel = hiltViewModel(),
+    vmTasks: TaskViewModel = hiltViewModel(),
+    vmSync: SyncViewModel = hiltViewModel(),
+    onBack: () -> Unit = {}
+) {
+    val pages by vmPages.pages.collectAsState()
+    val tasks by vmTasks.tasks.collectAsState()
+    val members by vmTasks.members.collectAsState()
+
+    var selectedPageId by remember { mutableStateOf<String?>(null) }
+    var selectedTaskId by remember { mutableStateOf<String?>(null) }
+
+    val selectedTask = tasks.firstOrNull { it.id == selectedTaskId }
+    val showPhoneList = selectedPageId == null
+    val showPageList = selectedPageId == null
+    val showTaskList = selectedTaskId == null && selectedPageId != null
+
+    LaunchedEffect(spaceId) {
+        vmPages.onEnter(spaceId)
+        vmTasks.onEnter(spaceId)
+    }
+
+    LaunchedEffect(selectedPageId) {
+        selectedPageId?.let { pageId ->
+            vmTasks.setSelectedPage(pageId)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA)) // Light background
+    ) {
+        // Top spacing for system UI
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Header - Light theme style
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left side - Logo/Title
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // App icon
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(
+                                Color(0xFF4A90E2),
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "N",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                    }
+                    
+                    Column {
+                        Text(
+                            text = "Workspace",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = Color(0xFF1F2937)
+                        )
+                        Text(
+                            text = "Pages & Tasks",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF6B7280)
+                        )
+                    }
+                }
+                
+                // Right side - Action buttons
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = { vmSync.manualSync() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = "Sync",
+                            tint = Color(0xFF4A90E2),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    IconButton(
+                        onClick = { /* TODO: Add page */ },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Page",
+                            tint = Color(0xFF4A90E2),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    // Back button
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color(0xFF4A90E2),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Content area with enhanced styling
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF8F9FA))
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val isWide = maxWidth >= 840.dp
+
+                val selectedPageTitle = pages.firstOrNull { it.id == selectedPageId }?.title
+
+                NotionShell(
+                    sidebar = {
+                        NotionSidebar(
+                            title = "Notify Workspace",
+                            pages = pages,
+                            selectedPageId = selectedPageId,
+                            onSelectPage = { id ->
+                                selectedPageId = id
+                                if (!isWide) selectedTaskId = null
+                            },
+                            onNewPage = {
+                                vmPages.createPage(title = "Untitled") { newId ->
+                                    selectedPageId = newId
+                                    selectedTaskId = null
+                                }
+                            },
+                            onRenamePage = { pageId, newName ->
+                                vmPages.renamePage(pageId, newName)
+                            },
+                            onDeletePage = { pageId ->
+                                vmPages.deletePage(pageId)
+                                // Select another page if current page is deleted
+                                if (selectedPageId == pageId && pages.isNotEmpty()) {
+                                    selectedPageId = pages.first { it.id != pageId }?.id
+                                }
+                            }
+                        )
+                    },
+                    phoneList = {
+                        NotionSidebar(
+                            title = "Notify Workspace",
+                            pages = pages,
+                            selectedPageId = selectedPageId,
+                            onSelectPage = { selectedPageId = it },
+                            onNewPage = {
+                                vmPages.createPage(title = "Untitled") { newId ->
+                                    selectedPageId = newId
+                                    selectedTaskId = null
+                                }
+                            },
+                            onRenamePage = { pageId, newName ->
+                                vmPages.renamePage(pageId, newName)
+                            },
+                            onDeletePage = { pageId ->
+                                vmPages.deletePage(pageId)
+                                // Select another page if current page is deleted
+                                if (selectedPageId == pageId && pages.isNotEmpty()) {
+                                    selectedPageId = pages.first { it.id != pageId }?.id
+                                }
+                            }
+                        )
+                    },
+                    showPhoneList = showPhoneList,
+                    onSync = { vmSync.manualSync() },
+                    onAdd = { title, pageType ->
+                        Log.d("WorkspaceScreen", "Add button clicked")
+                        vmPages.createPage(title = title, pageType = pageType) { newId ->
+                            Log.d("WorkspaceScreen", "Page created with ID: $newId")
+                            selectedPageId = newId
+                            selectedTaskId = null
+                        }
+                    },
+                    content = {
+                        if (isWide) {
+                            Row(Modifier.fillMaxSize()) {
+                                Column(
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .padding(20.dp)
+                                ) {
+                                    if (showPageList) {
+                                        // Enhanced page list when no page is selected
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(20.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color.White
+                                            ),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(24.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Your Pages",
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.SemiBold
+                                                    ),
+                                                    color = Color(0xFF1F2937),
+                                                    modifier = Modifier.padding(bottom = 16.dp)
+                                                )
+                                                
+                                                LazyColumn(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                                ) {
+                                                    items(pages) { page ->
+                                                        PageCard(
+                                                            page = page,
+                                                            onClick = { selectedPageId = page.id }
+                                                        )
+                                                    }
+                                                }
+                                                
+                                                Spacer(modifier = Modifier.height(16.dp))
+                                                
+                                                Button(
+                                                    onClick = {
+                                                        vmPages.createPage(title = "New Page", pageType = PageType.TASKS) { newId ->
+                                                            selectedPageId = newId
+                                                            selectedTaskId = null
+                                                        }
+                                                    },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = Color(0xFF4A90E2),
+                                                        contentColor = Color.White
+                                                    ),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "Create Page",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // Enhanced page detail when a page is selected
+                                        val selectedPage = pages.find { it.id == selectedPageId }
+                                        Column {
+                                            // Breadcrumb with reduced border
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                                                shape = RoundedCornerShape(8.dp),
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = Color.White
+                                                ),
+                                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = "Notify Workspace",
+                                                        style = MaterialTheme.typography.titleMedium.copy(
+                                                            fontWeight = FontWeight.SemiBold
+                                                        ),
+                                                        color = Color(0xFF1F2937)
+                                                    )
+                                                    
+                                                    Text(
+                                                        text = "›",
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        color = Color(0xFF6B7280)
+                                                    )
+                                                    
+                                                    Text(
+                                                        text = selectedPageTitle ?: "Untitled",
+                                                        style = MaterialTheme.typography.titleMedium.copy(
+                                                            fontWeight = FontWeight.SemiBold
+                                                        ),
+                                                        color = Color(0xFF1F2937)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(16.dp))
+
+                                        when (selectedPage?.pageType) {
+                                            PageType.TASKS -> {
+                                                // Enhanced task list for Tasks pages
+                                                if (showTaskList) {
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(20.dp),
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = Color.White
+                                                        ),
+                                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(24.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = "Tasks",
+                                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                                        fontWeight = FontWeight.SemiBold
+                                                                    ),
+                                                                    color = Color(0xFF1F2937),
+                                                                    modifier = Modifier.padding(bottom = 16.dp)
+                                                                )
+                                                            
+                                                            LazyColumn(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                            ) {
+                                                                tasks.filter { it.pageId == selectedPageId }.forEach { task ->
+                                                                    TaskCard(
+                                                                        task = task,
+                                                                        onClick = { selectedTaskId = task.id }
+                                                                    )
+                                                                }
+                                                            }
+                                                            
+                                                            Spacer(modifier = Modifier.height(16.dp))
+                                                            
+                                                            Button(
+                                                                onClick = {
+                                                                    vmTasks.createTask(selectedPageId ?: "", title = "New Task")
+                                                                },
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                colors = ButtonDefaults.buttonColors(
+                                                                    containerColor = Color(0xFF4A90E2),
+                                                                    contentColor = Color.White
+                                                                ),
+                                                                shape = RoundedCornerShape(8.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = "Add Task",
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                    fontWeight = FontWeight.Medium
+                                                                )
+                                                            }
+                                                    } else {
+                                                        // Enhanced task detail on mobile when a task is selected
+                                                        selectedTask?.let { task ->
+                                                            Card(
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .padding(20.dp),
+                                                                shape = RoundedCornerShape(12.dp),
+                                                                colors = CardDefaults.cardColors(
+                                                                    containerColor = Color.White
+                                                                ),
+                                                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                                                            ) {
+                                                                TaskDetailContent(
+                                                                    task = task,
+                                                                    members = members,
+                                                                    onBack = { selectedTaskId = null },
+                                                                    onDelete = {
+                                                                        vmTasks.deleteTask(task.id)
+                                                                        selectedTaskId = null
+                                                                    },
+                                                                    onTitleChange = { vmTasks.updateTitle(task.id, it) },
+                                                                    onDescriptionChange = { vmTasks.updateDescription(task.id, it) },
+                                                                    onSetStatus = { vmTasks.setStatus(task.id, it) },
+                                                                    onAssigneeChange = { vmTasks.updateAssignee(task.id, it) },
+                                                                    onDeadlineChange = { vmTasks.updateDeadline(task.id, it) },
+                                                                    onToggleCompleted = { vmTasks.toggleCompleted(task.id) }
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            PageType.NOTES -> {
+                                                // Enhanced notes interface on mobile for Notes pages
+                                                NotesPageScreen(
+                                                    pageId = selectedPageId,
+                                                    spaceId = spaceId,
+                                                    onBack = { selectedPageId = null }
+                                                )
+                                            }
+                                            PageType.DOCUMENT -> {
+                                                // Enhanced document interface on mobile for Document pages
+                                                DocumentPageScreen(
+                                                    pageId = selectedPageId,
+                                                    spaceId = spaceId,
+                                                    onBack = { selectedPageId = null }
+                                                )
+                                            }
+                                            null -> {
+                                                // Enhanced empty state
+                                                Card(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(32.dp),
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = Color.White
+                                                    ),
+                                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(32.dp),
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.Center
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(80.dp)
+                                                                .background(
+                                                                    Color(0xFF4A90E2).copy(alpha = 0.1f),
+                                                                    CircleShape
+                                                                ),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Article,
+                                                                contentDescription = "Empty pages",
+                                                                tint = Color(0xFF4A90E2),
+                                                                modifier = Modifier.size(40.dp)
+                                                            )
+                                                        }
+                                                        
+                                                        Spacer(modifier = Modifier.height(24.dp))
+                                                        
+                                                        Text(
+                                                            text = "No Pages Yet",
+                                                            style = MaterialTheme.typography.headlineSmall.copy(
+                                                                fontWeight = FontWeight.SemiBold
+                                                            ),
+                                                            color = Color(0xFF1F2937)
+                                                        )
+                                                        
+                                                        Spacer(modifier = Modifier.height(8.dp))
+                                                        
+                                                        Text(
+                                                            text = "Create your first page to start organizing",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = Color(0xFF6B7280),
+                                                            textAlign = TextAlign.Center
+                                                        )
+                                                        
+                                                        Spacer(modifier = Modifier.height(24dp))
+                                                        
+                                                        Button(
+                                                            onClick = {
+                                                                vmPages.createPage(title = "First Page", pageType = PageType.TASKS) { newId ->
+                                                                    selectedPageId = newId
+                                                                    selectedTaskId = null
+                                                                }
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            colors = ButtonDefaults.buttonColors(
+                                                                containerColor = Color(0xFF4A90E2),
+                                                                contentColor = Color.White
+                                                            ),
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "Create First Page",
+                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                fontWeight = FontWeight.Medium
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Column(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp)
+                            ) {
+                                if (showPageList) {
+                                    // Enhanced page list on mobile when no page is selected
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(20.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color.White
+                                        ),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(24.dp)
+                                        ) {
+                                            Text(
+                                                text = "Your Pages",
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
+                                                color = Color(0xFF1F2937),
+                                                modifier = Modifier.padding(bottom = 16.dp)
+                                            )
+                                            
+                                            LazyColumn(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                items(pages) { page ->
+                                                    PageCard(
+                                                        page = page,
+                                                        onClick = { selectedPageId = page.id }
+                                                    )
+                                                }
+                                            }
+                                            
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            
+                                            Button(
+                                                onClick = {
+                                                    vmPages.createPage(title = "New Page", pageType = PageType.TASKS) { newId ->
+                                                        selectedPageId = newId
+                                                        selectedTaskId = null
+                                                    }
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Color(0xFF4A90E2),
+                                                    contentColor = Color.White
+                                                ),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Create Page",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Enhanced page detail on mobile when a page is selected
+                                    val selectedPage = pages.find { it.id == selectedPageId }
+                                    Column {
+                                        // Breadcrumb with reduced border
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color.White
+                                            ),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Notify Workspace",
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.SemiBold
+                                                    ),
+                                                    color = Color(0xFF1F2937)
+                                                )
+                                                
+                                                Text(
+                                                    text = "›",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = Color(0xFF6B7280)
+                                                )
+                                                
+                                                Text(
+                                                    text = selectedPageTitle ?: "Untitled",
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.SemiBold
+                                                    ),
+                                                    color = Color(0xFF1F2937)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    when (selectedPage?.pageType) {
+                                        PageType.TASKS -> {
+                                            // Enhanced task list on mobile for Tasks pages
+                                            if (showTaskList) {
+                                                Card(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(20.dp),
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = Color.White
+                                                    ),
+                                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(24.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "Tasks",
+                                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                                fontWeight = FontWeight.SemiBold
+                                                            ),
+                                                            color = Color(0xFF1F2937),
+                                                            modifier = Modifier.padding(bottom = 16.dp)
+                                                        )
+                                                    
+                                                        LazyColumn(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                        ) {
+                                                            tasks.filter { it.pageId == selectedPageId }.forEach { task ->
+                                                                TaskCard(
+                                                                    task = task,
+                                                                    onClick = { selectedTaskId = task.id }
+                                                                )
+                                                            }
+                                                        }
+                                                    
+                                                        Spacer(modifier = Modifier.height(16.dp))
+                                                    
+                                                        Button(
+                                                            onClick = {
+                                                                vmTasks.createTask(selectedPageId ?: "", title = "New Task")
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            colors = ButtonDefaults.buttonColors(
+                                                                containerColor = Color(0xFF4A90E2),
+                                                                contentColor = Color.White
+                                                            ),
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "Add Task",
+                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                fontWeight = FontWeight.Medium
+                                                            )
+                                                        }
+                                                } else {
+                                                    // Enhanced task detail on mobile when a task is selected
+                                                    selectedTask?.let { task ->
+                                                        Card(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(20.dp),
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            colors = CardDefaults.cardColors(
+                                                                containerColor = Color.White
+                                                            ),
+                                                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                                                        ) {
+                                                            TaskDetailContent(
+                                                                task = task,
+                                                                members = members,
+                                                                onBack = { selectedTaskId = null },
+                                                                onDelete = {
+                                                                    vmTasks.deleteTask(task.id)
+                                                                    selectedTaskId = null
+                                                                },
+                                                                onTitleChange = { vmTasks.updateTitle(task.id, it) },
+                                                                onDescriptionChange = { vmTasks.updateDescription(task.id, it) },
+                                                                onSetStatus = { vmTasks.setStatus(task.id, it) },
+                                                                onAssigneeChange = { vmTasks.updateAssignee(task.id, it) },
+                                                                onDeadlineChange = { vmTasks.updateDeadline(task.id, it) },
+                                                                onToggleCompleted = { vmTasks.toggleCompleted(task.id) }
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        PageType.NOTES -> {
+                                            // Enhanced notes interface on mobile for Notes pages
+                                            NotesPageScreen(
+                                                pageId = selectedPageId,
+                                                spaceId = spaceId,
+                                                onBack = { selectedPageId = null }
+                                            )
+                                        }
+                                        PageType.DOCUMENT -> {
+                                            // Enhanced document interface on mobile for Document pages
+                                            DocumentPageScreen(
+                                                pageId = selectedPageId,
+                                                spaceId = spaceId,
+                                                onBack = { selectedPageId = null }
+                                            )
+                                        }
+                                        null -> {
+                                            // Enhanced empty state
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(32.dp),
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = Color.White
+                                                ),
+                                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(32.dp),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.Center
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(80.dp)
+                                                            .background(
+                                                                Color(0xFF4A90E2).copy(alpha = 0.1f),
+                                                                CircleShape
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Article,
+                                                            contentDescription = "Empty pages",
+                                                            tint = Color(0xFF4A90E2),
+                                                            modifier = Modifier.size(40.dp)
+                                                        )
+                                                    }
+                                                    
+                                                    Spacer(modifier = Modifier.height(24.dp))
+                                                    
+                                                    Text(
+                                                        text = "No Pages Yet",
+                                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                                            fontWeight = FontWeight.SemiBold
+                                                        ),
+                                                        color = Color(0xFF1F2937)
+                                                    )
+                                                    
+                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                    
+                                                    Text(
+                                                        text = "Create your first page to start organizing",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = Color(0xFF6B7280),
+                                                        textAlign = TextAlign.Center
+                                                    )
+                                                    
+                                                    Spacer(modifier = Modifier.height(24.dp))
+                                                    
+                                                    Button(
+                                                        onClick = {
+                                                            vmPages.createPage(title = "First Page", pageType = PageType.TASKS) { newId ->
+                                                                selectedPageId = newId
+                                                                selectedTaskId = null
+                                                            }
+                                                        },
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        colors = ButtonDefaults.buttonColors(
+                                                            containerColor = Color(0xFF4A90E2),
+                                                            contentColor = Color.White
+                                                        ),
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "Create First Page",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.Medium
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PageCard(
+    page: com.team.notify.taskflow.data.entities.PageEntity,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF8F9FA)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Page icon
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            when (page.pageType) {
+                                com.team.notify.taskflow.model.PageType.TASKS -> Color(0xFF10B981).copy(alpha = 0.1f)
+                                com.team.notify.taskflow.model.PageType.NOTES -> Color(0xFF4A90E2).copy(alpha = 0.1f)
+                                com.team.notify.taskflow.model.PageType.DOCUMENT -> Color(0xFFF59E0B).copy(alpha = 0.1f)
+                            },
+                            RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (page.pageType) {
+                            com.team.notify.taskflow.model.PageType.TASKS -> Icons.Default.Task
+                            com.team.notify.taskflow.model.PageType.NOTES -> Icons.Default.Article
+                            com.team.notify.taskflow.model.PageType.DOCUMENT -> Icons.Default.Description
+                        },
+                        contentDescription = null,
+                        tint = when (page.pageType) {
+                            com.team.notify.taskflow.model.PageType.TASKS -> Color(0xFF10B981)
+                            com.team.notify.taskflow.model.PageType.NOTES -> Color(0xFF4A90E2)
+                            com.team.notify.taskflow.model.PageType.DOCUMENT -> Color(0xFFF59E0B)
+                        },
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                Column {
+                    Text(
+                        text = page.title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF1F2937),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = when (page.pageType) {
+                            com.team.notify.taskflow.model.PageType.TASKS -> "Tasks"
+                            com.team.notify.taskflow.model.PageType.NOTES -> "Notes"
+                            com.team.notify.taskflow.model.PageType.DOCUMENT -> "Document"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+            }
+            
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFF6B7280),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TaskCard(
+    task: com.team.notify.taskflow.data.entities.TaskEntity,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Checkbox
+                Checkbox(
+                    checked = task.isCompleted,
+                    onCheckedChange = { /* TODO: Toggle completion */ },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Color(0xFF4A90E2)
+                    )
+                )
+                
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF1F2937),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = task.description ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7280),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            // Status indicator
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        when (task.status) {
+                            com.team.notify.taskflow.model.TaskStatus.TODO -> Color(0xFF6B7280)
+                            com.team.notify.taskflow.model.TaskStatus.IN_PROGRESS -> Color(0xFF4A90E2)
+                            com.team.notify.taskflow.model.TaskStatus.DONE -> Color(0xFF10B981)
+                        },
+                        CircleShape
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun TaskDetailContent(
+    task: com.team.notify.taskflow.data.entities.TaskEntity,
+    members: List<com.team.notify.taskflow.data.entities.UserProfileEntity>,
+    onBack: () -> Unit,
+    onDelete: () -> Unit,
+    onTitleChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onSetStatus: (com.team.notify.taskflow.model.TaskStatus) -> Unit,
+    onAssigneeChange: (String?) -> Unit,
+    onDeadlineChange: (Long?) -> Unit,
+    onToggleCompleted: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color(0xFF4A90E2)
+                )
+            }
+            
+            Text(
+                text = "Task Details",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = Color(0xFF1F2937)
+            )
+            
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color(0xFFEF4444)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Task form
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = task.title,
+                onValueChange = onTitleChange,
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF4A90E2),
+                    unfocusedBorderColor = Color(0xFFE5E7EB),
+                    cursorColor = Color(0xFF1F2937),
+                    focusedTextColor = Color(0xFF1F2937),
+                    unfocusedTextColor = Color(0xFF1F2937)
+                )
+            )
+            
+            OutlinedTextField(
+                value = task.description ?: "",
+                onValueChange = onDescriptionChange,
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF4A90E2),
+                    unfocusedBorderColor = Color(0xFFE5E7EB),
+                    cursorColor = Color(0xFF1F2937),
+                    focusedTextColor = Color(0xFF1F2937),
+                    unfocusedTextColor = Color(0xFF1F2937)
+                )
+            )
+            
+            // Status and completion
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Status:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF1F2937)
+                )
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(
+                        checked = task.isCompleted,
+                        onCheckedChange = { onToggleCompleted() },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF4A90E2)
+                        )
+                    )
+                    Text(
+                        text = if (task.isCompleted) "Completed" else "Not completed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+            }
+        }
+    }
+}

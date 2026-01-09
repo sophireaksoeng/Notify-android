@@ -42,7 +42,5 @@ Built for low-end phones and weak internet.
 
 
 ## 🚀 Quick Start
-```bash
 git clone https://github.com/sophireaksoeng/Notify-android.git
 cd Notify-android
-git checkout 
