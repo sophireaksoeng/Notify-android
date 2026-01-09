@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 object NotionColors {
 
-    // Light
+
     val LightText = Color(0xFF37352F)
     val LightSubText = Color(0xFF6B6B6B)
     val LightDivider = Color(0xFFE6E6E6)

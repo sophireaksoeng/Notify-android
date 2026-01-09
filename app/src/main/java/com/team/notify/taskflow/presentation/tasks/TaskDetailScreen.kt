@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.team.notify.taskflow.data.entities.SpaceMemberEntity
+import com.team.notify.taskflow.data.entities.SpaceMemberEntity // Ensure this import is correct
 import com.team.notify.taskflow.data.entities.TaskEntity
 import com.team.notify.taskflow.model.TaskStatus
 import com.team.notify.taskflow.ui.NotionBodyField
@@ -186,7 +186,7 @@ private fun DueQuickButtons(
     var showDatePicker by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val calendar = java.util.Calendar.getInstance()
-    
+
     // Format current deadline for display
     val currentDeadlineText = current?.let { deadline ->
         val now = System.currentTimeMillis()
@@ -199,7 +199,7 @@ private fun DueQuickButtons(
             else -> java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(deadline))
         }
     } ?: "No due date"
-    
+
     Column {
         // Current deadline display
         Row(
@@ -223,7 +223,7 @@ private fun DueQuickButtons(
                     } else Color(0xFF6B7280)
                 )
             )
-            
+
             TextButton(
                 onClick = { showDatePicker = true },
                 colors = ButtonDefaults.textButtonColors(
@@ -239,9 +239,9 @@ private fun DueQuickButtons(
                 Text("Pick Date")
             }
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         // Quick selection buttons
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -249,13 +249,13 @@ private fun DueQuickButtons(
         ) {
             FilterChip(
                 onClick = { onChange(null) },
-                label = { 
+                label = {
                     Text(
                         "None",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Medium
                         )
-                    ) 
+                    )
                 },
                 selected = current == null,
                 colors = FilterChipDefaults.filterChipColors(
@@ -263,19 +263,19 @@ private fun DueQuickButtons(
                     selectedLabelColor = Color.White
                 )
             )
-            
+
             FilterChip(
-                onClick = { 
+                onClick = {
                     val tomorrow = System.currentTimeMillis() + 24 * 60 * 60 * 1000
-                    onChange(tomorrow) 
+                    onChange(tomorrow)
                 },
-                label = { 
+                label = {
                     Text(
                         "Today",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Medium
                         )
-                    ) 
+                    )
                 },
                 selected = isToday(current),
                 colors = FilterChipDefaults.filterChipColors(
@@ -283,19 +283,19 @@ private fun DueQuickButtons(
                     selectedLabelColor = Color.White
                 )
             )
-            
+
             FilterChip(
-                onClick = { 
+                onClick = {
                     val tomorrow = System.currentTimeMillis() + 24 * 60 * 60 * 1000
-                    onChange(tomorrow) 
+                    onChange(tomorrow)
                 },
-                label = { 
+                label = {
                     Text(
                         "Tomorrow",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Medium
                         )
-                    ) 
+                    )
                 },
                 selected = isTomorrow(current),
                 colors = FilterChipDefaults.filterChipColors(
@@ -303,19 +303,19 @@ private fun DueQuickButtons(
                     selectedLabelColor = Color.White
                 )
             )
-            
+
             FilterChip(
-                onClick = { 
+                onClick = {
                     val nextWeek = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000
-                    onChange(nextWeek) 
+                    onChange(nextWeek)
                 },
-                label = { 
+                label = {
                     Text(
                         "Next Week",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Medium
                         )
-                    ) 
+                    )
                 },
                 selected = isNextWeek(current),
                 colors = FilterChipDefaults.filterChipColors(
@@ -324,26 +324,26 @@ private fun DueQuickButtons(
                 )
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Additional quick options
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             FilterChip(
-                onClick = { 
+                onClick = {
                     val in3Days = System.currentTimeMillis() + 3 * 24 * 60 * 60 * 1000
-                    onChange(in3Days) 
+                    onChange(in3Days)
                 },
-                label = { 
+                label = {
                     Text(
                         "In 3 Days",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Medium
                         )
-                    ) 
+                    )
                 },
                 selected = isIn3Days(current),
                 colors = FilterChipDefaults.filterChipColors(
@@ -351,19 +351,19 @@ private fun DueQuickButtons(
                     selectedLabelColor = Color.White
                 )
             )
-            
+
             FilterChip(
-                onClick = { 
+                onClick = {
                     val in2Weeks = System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000
-                    onChange(in2Weeks) 
+                    onChange(in2Weeks)
                 },
-                label = { 
+                label = {
                     Text(
                         "In 2 Weeks",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Medium
                         )
-                    ) 
+                    )
                 },
                 selected = isIn2Weeks(current),
                 colors = FilterChipDefaults.filterChipColors(
@@ -373,7 +373,7 @@ private fun DueQuickButtons(
             )
         }
     }
-    
+
     // Date picker dialog
     if (showDatePicker) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { showDatePicker = false }) {
@@ -393,9 +393,9 @@ private fun DueQuickButtons(
                         ),
                         color = Color(0xFF111827)
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     // Simple date selection buttons
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -421,7 +421,7 @@ private fun DueQuickButtons(
                                 Text(label)
                             }
                         }
-                        
+
                         Button(
                             onClick = {
                                 onChange(null)
@@ -436,9 +436,9 @@ private fun DueQuickButtons(
                             Text("Remove Due Date")
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -460,7 +460,7 @@ private fun isToday(deadline: Long?): Boolean {
     val today = java.util.Calendar.getInstance()
     val deadlineCal = java.util.Calendar.getInstance().apply { timeInMillis = deadline }
     return today.get(java.util.Calendar.YEAR) == deadlineCal.get(java.util.Calendar.YEAR) &&
-           today.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
+            today.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 private fun isTomorrow(deadline: Long?): Boolean {
@@ -469,7 +469,7 @@ private fun isTomorrow(deadline: Long?): Boolean {
     val tomorrowCal = java.util.Calendar.getInstance().apply { timeInMillis = tomorrow }
     val deadlineCal = java.util.Calendar.getInstance().apply { timeInMillis = deadline }
     return tomorrowCal.get(java.util.Calendar.YEAR) == deadlineCal.get(java.util.Calendar.YEAR) &&
-           tomorrowCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
+            tomorrowCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 private fun isNextWeek(deadline: Long?): Boolean {
@@ -478,7 +478,7 @@ private fun isNextWeek(deadline: Long?): Boolean {
     val nextWeekCal = java.util.Calendar.getInstance().apply { timeInMillis = nextWeek }
     val deadlineCal = java.util.Calendar.getInstance().apply { timeInMillis = deadline }
     return nextWeekCal.get(java.util.Calendar.YEAR) == deadlineCal.get(java.util.Calendar.YEAR) &&
-           nextWeekCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
+            nextWeekCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 private fun isIn3Days(deadline: Long?): Boolean {
@@ -487,7 +487,7 @@ private fun isIn3Days(deadline: Long?): Boolean {
     val in3DaysCal = java.util.Calendar.getInstance().apply { timeInMillis = in3Days }
     val deadlineCal = java.util.Calendar.getInstance().apply { timeInMillis = deadline }
     return in3DaysCal.get(java.util.Calendar.YEAR) == deadlineCal.get(java.util.Calendar.YEAR) &&
-           in3DaysCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
+            in3DaysCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 private fun isIn2Weeks(deadline: Long?): Boolean {
@@ -496,5 +496,5 @@ private fun isIn2Weeks(deadline: Long?): Boolean {
     val in2WeeksCal = java.util.Calendar.getInstance().apply { timeInMillis = in2Weeks }
     val deadlineCal = java.util.Calendar.getInstance().apply { timeInMillis = deadline }
     return in2WeeksCal.get(java.util.Calendar.YEAR) == deadlineCal.get(java.util.Calendar.YEAR) &&
-           in2WeeksCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
+            in2WeeksCal.get(java.util.Calendar.DAY_OF_YEAR) == deadlineCal.get(java.util.Calendar.DAY_OF_YEAR)
 }

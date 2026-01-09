@@ -1,209 +1,174 @@
 package com.team.notify.taskflow.presentation.pages
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.team.notify.taskflow.ui.NotionBodyField
-import com.team.notify.taskflow.ui.NotionDivider
-import com.team.notify.taskflow.ui.NotionPageHeader
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.team.notify.taskflow.domain.model.Block
 
 @Composable
 fun PageDetailScreen(
     pageId: String?,
-    spaceId: String,
-    onBack: () -> Unit,
-    vm: PageDetailViewModel = hiltViewModel()
+    onNavigateBack: () -> Unit,
+    viewModel: PageDetailViewModel = hiltViewModel()
 ) {
-    val state by vm.uiState.collectAsState()
-    val saving by vm.saving.collectAsState()
-    var showAddDialog by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isSaving by viewModel.saving.collectAsStateWithLifecycle()
 
+    // Load data once when entering composition
     LaunchedEffect(pageId) {
-        vm.load(pageId)
+        viewModel.load(pageId)
     }
 
-    if (pageId == null) {
-        Box(
-            Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "Select a page to start",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    Scaffold(
+        topBar = {
+            PageDetailTopBar(
+                isSaving = isSaving,
+                onBackClick = onNavigateBack
             )
         }
-        return
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .widthIn(max = 900.dp)
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Spacer(Modifier.weight(1f))
-                if (saving) {
-                    Text(
-                        "Saving…",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                    )
-                }
-                TextButton(onClick = { vm.save(spaceId) }) { Text("Save") }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            NotionDivider()
-            Spacer(Modifier.height(12.dp))
-
-            NotionPageHeader(
-                emoji = "📄",
-                title = state.title,
-                onTitleChange = { vm.updateTitle(it) }
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            NotionBodyField(
-                value = state.description,
-                onValueChange = { vm.updateDescription(it) },
-                placeholder = "Type / for blocks…",
-                minLines = 12
-            )
-            
-            // Add bottom padding to avoid FAB overlap
-            Spacer(Modifier.height(80.dp))
-        }
-        
-        // Floating Action Button for adding content
-        FloatingActionButton(
-            onClick = { showAddDialog = true },
+    ) { paddingValues ->
+        PageContent(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = Color(0xFF4A90E2),
-            contentColor = Color.White
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add Content",
-                modifier = Modifier.size(24.dp)
-            )
-        }
+                .padding(paddingValues)
+                .fillMaxSize(),
+            title = uiState.title,
+            content = uiState.content,
+            onTitleChange = viewModel::updateTitle,
+            onContentChange = { newText ->
+                // For a simple text editor, we treat the whole content as one update
+                viewModel.updateContent(newText)
+
+                // If you have a complex block editor, you would construct blocks here:
+                // viewModel.onBlocksChanged(parseTextToBlocks(newText))
+            }
+        )
     }
-    
-    // Add Content Dialog
-    if (showAddDialog) {
-        var contentType by remember { mutableStateOf("Text") }
-        var contentTitle by remember { mutableStateOf("") }
-        
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { 
-                Text(
-                    "Add Content Block",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.SemiBold
-                    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PageDetailTopBar(
+    isSaving: Boolean,
+    onBackClick: () -> Unit
+) {
+    TopAppBar(
+        title = { }, // Title is in the content area like Notion/Google Docs
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back"
                 )
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        "Select content type:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
-                    )
-                    
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf("Text", "Heading", "List", "Quote").forEach { type ->
-                            FilterChip(
-                                onClick = { contentType = type },
-                                label = { 
-                                    Text(
-                                        type,
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    ) 
-                                },
-                                selected = contentType == type,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Color(0xFF4A90E2),
-                                    selectedLabelColor = Color.White
-                                )
-                            )
-                        }
-                    }
-                    
-                    if (contentType == "Text") {
-                        OutlinedTextField(
-                            value = contentTitle,
-                            onValueChange = { contentTitle = it },
-                            label = { Text("Text content") },
-                            placeholder = { Text("Enter text...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF4A90E2),
-                                unfocusedBorderColor = Color(0xFFE5E7EB),
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
+            }
+        },
+        actions = {
+            if (isSaving) {
+                Text(
+                    text = "Saving...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(end = 16.dp)
+                )
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            } else {
+                Text(
+                    text = "Saved",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(end = 16.dp)
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun PageContent(
+    modifier: Modifier = Modifier,
+    title: String,
+    content: String,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit
+) {
+    Column(
+        modifier = modifier
+            .padding(horizontal = 24.dp) // Add nice side padding
+            .fillMaxSize()
+    ) {
+        // 1. Title Input (Large, Bold)
+        BasicTextField(
+            value = title,
+            onValueChange = onTitleChange,
+            textStyle = TextStyle(
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            decorationBox = { innerTextField ->
+                Box(modifier = Modifier.padding(vertical = 16.dp)) {
+                    if (title.isEmpty()) {
+                        Text(
+                            text = "Untitled",
+                            style = TextStyle(
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                             )
                         )
                     }
+                    innerTextField()
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        // Add content to page description
-                        val newContent = when (contentType) {
-                            "Text" -> if (contentTitle.isNotBlank()) contentTitle else "New text block"
-                            "Heading" -> "## New Heading"
-                            "List" -> "- New list item"
-                            "Quote" -> "> New quote"
-                            else -> "New content block"
-                        }
-                        vm.updateDescription(state.description + "\n\n" + newContent)
-                        showAddDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4A90E2),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Add")
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 2. Content Body
+        // Note: For a real block editor, replace this BasicTextField with a LazyColumn of blocks
+        BasicTextField(
+            value = content,
+            onValueChange = onContentChange,
+            textStyle = TextStyle(
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier.fillMaxSize(),
+            decorationBox = { innerTextField ->
+                Box {
+                    if (content.isEmpty()) {
+                        Text(
+                            text = "Type something...",
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
+                        )
+                    }
+                    innerTextField()
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel", color = Color(0xFF6B7280))
-                }
-            },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White
+            }
         )
     }
 }

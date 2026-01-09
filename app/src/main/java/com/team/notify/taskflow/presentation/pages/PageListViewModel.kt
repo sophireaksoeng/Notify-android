@@ -48,7 +48,6 @@ class PageListViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d("PageListVM", "Creating page with title: $title")
             try {
-                // First try creating locally for immediate UI update
                 val localId = UUID.randomUUID().toString()
                 val now = System.currentTimeMillis()
                 val page = PageEntity(
@@ -56,21 +55,18 @@ class PageListViewModel @Inject constructor(
                     spaceId = spaceIdFlow.value,
                     title = title,
                     content = "",
-                    pageType = pageType, // Add pageType field
+                    pageType = pageType,
                     version = 1,
                     createdAt = now,
                     updatedAt = now,
                     hasConflict = false,
-                    ownerId = auth.currentUser?.uid ?: "" // Add ownerId for Firebase security rules
+                    ownerId = auth.currentUser?.uid ?: ""
                 )
                 
                 Log.d("PageListVM", "Creating page locally first with ID: $localId")
                 repo.insert(page)
-                
-                // Notify UI immediately
+
                 onCreated(localId)
-                
-                // Then try to sync to Firebase in background
                 try {
                     Log.d("PageListVM", "Attempting Firebase sync")
                     val result = firebaseSyncService.createPageInFirebase(page.copy(id = ""))
@@ -78,10 +74,8 @@ class PageListViewModel @Inject constructor(
                     result.fold(
                         onSuccess = { firebaseId ->
                             Log.d("PageListVM", "Firebase sync successful with ID: $firebaseId")
-                            // Update local page with Firebase ID
                             val updatedPage = page.copy(id = firebaseId)
                             repo.update(updatedPage)
-                            // Notify UI of ID change
                             onCreated(firebaseId)
                         },
                         onFailure = { exception ->
@@ -108,8 +102,6 @@ class PageListViewModel @Inject constructor(
                         updatedAt = System.currentTimeMillis()
                     )
                     repo.update(updatedPage)
-                    
-                    // Also sync to Firebase
                     firebaseSyncService.updatePageInFirebase(updatedPage)
                 }
             } catch (e: Exception) {
@@ -121,10 +113,7 @@ class PageListViewModel @Inject constructor(
     fun deletePage(pageId: String) {
         viewModelScope.launch {
             try {
-                // Delete locally first
                 repo.deleteById(pageId)
-                
-                // Also delete from Firebase
                 firebaseSyncService.deletePageInFirebase(pageId)
             } catch (e: Exception) {
                 Log.e("PageListVM", "deletePage failed", e)

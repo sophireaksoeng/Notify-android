@@ -1,28 +1,33 @@
 package com.team.notify.ui.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -35,16 +40,16 @@ fun AuthScreen(
     onLoginSuccess: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+    var isLoginMode by remember { mutableStateOf(true) }
     var passwordVisible by remember { mutableStateOf(false) }
-    val scrollState = rememberScrollState()
 
-    // Animated background gradient
+   
     val infiniteTransition = rememberInfiniteTransition(label = "gradient")
     val gradientOffset by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 1f,
+        targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(3000),
+            animation = tween(15000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "gradientOffset"
@@ -52,11 +57,11 @@ fun AuthScreen(
 
     val gradient = Brush.linearGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
-            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.secondaryContainer
         ),
-        start = androidx.compose.ui.geometry.Offset.Zero,
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
         end = androidx.compose.ui.geometry.Offset(gradientOffset, gradientOffset)
     )
 
@@ -64,14 +69,14 @@ fun AuthScreen(
         modifier = modifier
             .fillMaxSize()
             .background(gradient)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        // Login card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
-                .align(Alignment.Center),
-            shape = RoundedCornerShape(16.dp),
+                .animateContentSize(),
+            shape = RoundedCornerShape(24.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
@@ -80,255 +85,188 @@ fun AuthScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(32.dp)
-                    .verticalScroll(scrollState),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // App logo and title
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(64.dp)
                 ) {
-                    Text(
-                        text = "📝",
-                        style = MaterialTheme.typography.displayMedium,
-                        fontSize = 64.sp
-                    )
-                    Text(
-                        text = "Notify",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                    Text(
-                        text = "Your workspace, organized",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-
-                if (state.userId != null) {
-                    Text(
-                        text = "Welcome back!",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "Continue to your workspace",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Button(
-                        onClick = onLoginSuccess,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(vertical = 16.dp)
-                    ) {
-                        Text(
-                            text = "Continue to App",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    TextButton(
-                        onClick = { 
-                            viewModel.logout()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Logout")
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("📝", fontSize = 32.sp)
                     }
                 }
 
-                // Display Name field (for registration)
-                if (state.userId == null) {
-                    OutlinedTextField(
-                        value = state.displayName,
-                        onValueChange = viewModel::onDisplayNameChanged,
-                        label = { Text("Display Name") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Display Name"
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (isLoginMode) "Welcome Back" else "Create Account",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = if (isLoginMode) "Sign in to continue" else "Sign up to get started",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                AnimatedVisibility(
+                    visible = !isLoginMode,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        OutlinedTextField(
+                            value = state.displayName,
+                            onValueChange = viewModel::onDisplayNameChanged,
+                            label = { Text("Display Name") },
+                            leadingIcon = { Icon(Icons.Default.Person, null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
-                    )
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Username field (for registration)
-                    OutlinedTextField(
-                        value = state.username,
-                        onValueChange = viewModel::onUsernameChanged,
-                        label = { Text("Username") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = "Username"
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        OutlinedTextField(
+                            value = state.username,
+                            onValueChange = viewModel::onUsernameChanged,
+                            label = { Text("Username") },
+                            leadingIcon = { Icon(Icons.Default.Badge, null) }, 
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
-
-                // Email field
+                
                 OutlinedTextField(
                     value = state.email,
                     onValueChange = viewModel::onEmailChanged,
                     label = { Text("Email") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "Email"
-                        )
-                    },
+                    leadingIcon = { Icon(Icons.Default.Email, null) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    )
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 )
 
-                // Password field
+                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = state.password,
                     onValueChange = viewModel::onPasswordChanged,
                     label = { Text("Password") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "Password"
-                        )
-                    },
+                    leadingIcon = { Icon(Icons.Default.Lock, null) },
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                contentDescription = "Toggle password"
                             )
                         }
                     },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    )
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 )
-
-                // Error message
-                if (state.errorMessage != null) {
+                
+                AnimatedVisibility(visible = state.errorMessage != null) {
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        modifier = Modifier.padding(top = 16.dp).fillMaxWidth()
                     ) {
-                        Text(
-                            text = state.errorMessage ?: "",
-                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        Row(
                             modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodySmall
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.ErrorOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = state.errorMessage ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        if (isLoginMode) {
+                            viewModel.login()
+                            if (state.userId != null) onLoginSuccess()
+                        } else {
+                            viewModel.register()
+                            if (state.userId != null) onLoginSuccess()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !state.isLoading
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(
+                            text = if (isLoginMode) "Sign In" else "Create Account",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Login/Register buttons
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Button(
-                        onClick = { 
-                            viewModel.login()
-                            // Handle login success
-                            if (state.userId != null) {
-                                onLoginSuccess()
-                            }
-                        },
-                        enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(vertical = 16.dp)
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                text = "Login",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
+                    Text(
+                        text = if (isLoginMode) "Don't have an account? " else "Already have an account? ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (isLoginMode) "Sign Up" else "Log In",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable {
+                                isLoginMode = !isLoginMode
 
-                    OutlinedButton(
-                        onClick = { 
-                            viewModel.register()
-                            // Handle register success
-                            if (state.userId != null) {
-                                onLoginSuccess()
                             }
-                        },
-                        enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank() && 
-                        state.displayName.isNotBlank() && state.username.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(vertical = 16.dp)
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                text = "Register",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
+                            .padding(4.dp)
+                    )
                 }
-
-                // Footer text
-                Text(
-                    text = "Secure login with Firebase Auth",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
             }
         }
     }

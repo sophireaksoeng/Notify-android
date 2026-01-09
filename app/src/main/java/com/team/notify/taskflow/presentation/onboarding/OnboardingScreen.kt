@@ -1,9 +1,7 @@
 package com.team.notify.taskflow.presentation.onboarding
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -11,135 +9,160 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ViewQuilt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     onOnboardingComplete: () -> Unit
 ) {
-    var currentPage by remember { mutableStateOf(0) }
     val pagerState = rememberPagerState(pageCount = { 4 })
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(currentPage) {
-        pagerState.animateScrollToPage(currentPage)
-    }
-
-    LaunchedEffect(pagerState.currentPage) {
-        currentPage = pagerState.currentPage
-    }
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Skip button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            if (currentPage < 3) {
-                TextButton(onClick = onOnboardingComplete) {
-                    Text("Skip")
-                }
-            }
-        }
-
-        // Pager content
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f)
-        ) { page ->
-            when (page) {
-                0 -> WelcomePage()
-                1 -> PageTypesPage()
-                2 -> TaskFeaturesPage()
-                3 -> GetStartedPage(onOnboardingComplete)
-            }
-        }
-
-        // Page indicators and navigation
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Page indicators
-            Row(
-                modifier = Modifier.padding(bottom = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                repeat(4) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (index == currentPage) 
-                                    MaterialTheme.colorScheme.primary 
-                                else 
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            )
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
                     )
-                }
-            }
+                )
+            )
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-            // Navigation buttons
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 48.dp, end = 24.dp),
+                horizontalArrangement = Arrangement.End
             ) {
-                if (currentPage > 0) {
+                AnimatedVisibility(
+                    visible = pagerState.currentPage < 3,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                     TextButton(
-                        onClick = { 
-                            currentPage = (currentPage - 1).coerceAtLeast(0)
-                        }
+                        onClick = onOnboardingComplete,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Back")
-                        }
+                        Text(
+                            "Skip",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                } else {
-                    Spacer(modifier = Modifier.width(80.dp))
+                }
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) { page ->
+                OnboardingPageContent(page = page)
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp)
+                    .navigationBarsPadding(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(4) { index ->
+                        val isSelected = pagerState.currentPage == index
+                        val width by animateDpAsState(
+                            targetValue = if (isSelected) 32.dp else 8.dp,
+                            label = "dot_width",
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                        )
+                        val color by animateColorAsState(
+                            targetValue = if (isSelected)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.outlineVariant,
+                            label = "dot_color"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .height(8.dp)
+                                .width(width)
+                                .clip(CircleShape)
+                                .background(color)
+                        )
+                    }
                 }
 
-                if (currentPage < 3) {
-                    Button(
-                        onClick = { 
-                            currentPage = (currentPage + 1).coerceAtMost(3)
-                        }
+                Box {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = pagerState.currentPage < 3,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Next")
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                Icons.Default.ArrowForward,
-                                contentDescription = "Next",
-                                modifier = Modifier.size(16.dp)
+                        FilledIconButton(
+                            onClick = {
+                                scope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
+                            },
+                            modifier = Modifier.size(56.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
+                        }
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = pagerState.currentPage == 3,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Button(
+                            onClick = onOnboardingComplete,
+                            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
+                        ) {
+                            Text(
+                                "Get Started",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -150,305 +173,98 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun WelcomePage() {
+fun OnboardingPageContent(page: Int) {
+    val infiniteTransition = rememberInfiniteTransition(label = "floating")
+    val offsetY by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -20f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "offset"
+    )
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // App icon/illustration
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "📝",
-                fontSize = 48.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Welcome to Notify",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Your productivity workspace",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Start organizing your tasks, notes, and documents.\n\nWorks locally without login, or sync to cloud for access anywhere.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            lineHeight = 24.sp
-        )
-    }
-}
-
-@Composable
-private fun PageTypesPage() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Choose Your Workspace",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Default
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Page type cards
-        Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            PageTypeCard(
-                icon = "📋",
-                title = "Tasks",
-                description = "Manage your to-do lists with priorities and deadlines"
-            )
-            
-            PageTypeCard(
-                icon = "📝",
-                title = "Notes",
-                description = "Write and organize your thoughts with rich text"
-            )
-            
-            PageTypeCard(
-                icon = "📄",
-                title = "Documents",
-                description = "Create structured documents for formal content"
-            )
-        }
-    }
-}
-
-@Composable
-private fun PageTypeCard(
-    icon: String,
-    title: String,
-    description: String
-) {
-    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = icon,
-                fontSize = 32.sp,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-            
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = FontFamily.Default
-                )
-                
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    fontFamily = FontFamily.Default
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaskFeaturesPage() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "Powerful Features",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
-        )
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            FeatureItem(
-                icon = "🔴",
-                title = "Priority Levels",
-                description = "Set High, Medium, or Low priority for your tasks"
-            )
-            
-            FeatureItem(
-                icon = "📅",
-                title = "Deadline Tracking",
-                description = "Never miss a deadline with smart reminders"
-            )
-            
-            FeatureItem(
-                icon = "✅",
-                title = "Status Management",
-                description = "Track progress from Todo to Doing to Done"
-            )
-            
-            FeatureItem(
-                icon = "☁️",
-                title = "Optional Cloud Sync",
-                description = "Login to sync across devices, or use locally"
-            )
+        val icon = when (page) {
+            0 -> Icons.AutoMirrored.Filled.Sort
+            1 -> Icons.Default.ViewQuilt
+            2 -> Icons.Default.CloudOff
+            3 -> Icons.Default.CheckCircle
+            else -> Icons.Default.CheckCircle
         }
-    }
-}
 
-@Composable
-private fun FeatureItem(
-    icon: String,
-    title: String,
-    description: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = icon,
-            fontSize = 24.sp,
-            modifier = Modifier.padding(end = 16.dp)
-        )
-        
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+        val containerColor = when (page) {
+            0 -> MaterialTheme.colorScheme.primaryContainer
+            1 -> MaterialTheme.colorScheme.secondaryContainer
+            2 -> MaterialTheme.colorScheme.tertiaryContainer
+            else -> MaterialTheme.colorScheme.primary
         }
-    }
-}
 
-@Composable
-private fun GetStartedPage(
-    onGetStarted: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Success illustration
+        val iconColor = when (page) {
+            0 -> MaterialTheme.colorScheme.onPrimaryContainer
+            1 -> MaterialTheme.colorScheme.onSecondaryContainer
+            2 -> MaterialTheme.colorScheme.onTertiaryContainer
+            else -> MaterialTheme.colorScheme.onPrimary
+        }
+
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .clip(RoundedCornerShape(60.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .graphicsLayer { translationY = offsetY }
+                .size(160.dp)
+                .clip(RoundedCornerShape(40.dp))
+                .background(containerColor),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "🚀",
-                fontSize = 48.sp
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = iconColor
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(56.dp))
+
+        val title = when (page) {
+            0 -> "Welcome to Notify"
+            1 -> "Organize Everything"
+            2 -> "Work Offline First"
+            3 -> "Ready to Launch?"
+            else -> ""
+        }
 
         Text(
-            text = "You're All Set!",
-            style = MaterialTheme.typography.headlineLarge,
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Start using Notify locally or sync to cloud",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Button(
-            onClick = onGetStarted,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(28.dp)
-        ) {
-            Text(
-                text = "Get Started",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
+        val description = when (page) {
+            0 -> "The simplest way to manage tasks, notes, and projects. No clutter, just focus."
+            1 -> "Create workspaces for school, personal life, or work. Switch between them instantly."
+            2 -> "Bad internet? No problem. Notify works 100% offline and syncs when you're back online."
+            3 -> "Your productivity journey starts here. Let's set up your first workspace."
+            else -> ""
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         Text(
-            text = "Create your first workspace and start organizing\nLogin anytime for cloud sync",
-            style = MaterialTheme.typography.bodySmall,
+            text = description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            lineHeight = 18.sp
+            lineHeight = 24.sp
         )
     }
 }
